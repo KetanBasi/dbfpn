@@ -1,0 +1,282 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int       @id @default(autoincrement())
+  name          String?
+  username      String?   @unique
+  email         String    @unique
+  emailVerified DateTime? @map("email_verified")
+  role          String    @default("user") // 'user', 'admin'
+  avatarUrl     String?   @map("avatar_url")
+  bio           String?
+  socialLinks   Json?     @map("social_links")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  status        String    @default("active") // 'active', 'banned'
+
+  accounts      Account[]
+  sessions      Session[]
+
+  movies        Movie[]
+  people        Person[]
+  reviews       Review[]
+  comments      Comment[]
+  watchlist     Watchlist[]
+  reports       Report[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+
+  @@map("users")
+  @@index([username])
+  @@index([email])
+  @@index([role])
+  @@index([status])
+}
+
+model Account {
+  id                 Int     @id @default(autoincrement())
+  userId             Int     @map("user_id")
+  type               String
+  provider           String
+  providerAccountId  String  @map("provider_account_id")
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+  @@index([userId])
+}
+
+model Session {
+  id           Int      @id @default(autoincrement())
+  sessionToken String   @unique @map("session_token")
+  userId       Int      @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Movie {
+  id          Int       @id @default(autoincrement())
+  title       String
+  slug        String    @unique
+  synopsis    String?
+  releaseDate DateTime? @map("release_date") @db.Date
+  duration    Int?
+  posterUrl   String?   @map("poster_url")
+  bannerUrl   String?   @map("banner_url")
+  trailerUrl  String?   @map("trailer_url")
+  videoUrl    String?   @map("video_url")
+  status      String    @default("pending") // 'pending', 'approved', 'rejected'
+  submitterId Int?      @map("submitter_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime? @updatedAt @map("updated_at")
+
+  submitter   User?     @relation(fields: [submitterId], references: [id])
+  genres      MovieGenre[]
+  people      MoviePerson[]
+  reviews     Review[]
+  comments    Comment[]
+  watchlist   Watchlist[]
+
+  @@map("movies")
+  @@index([slug])
+  @@index([status])
+  @@index([submitterId])
+  @@index([releaseDate])
+  @@index([createdAt])
+}
+
+model Genre {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  slug  String @unique
+
+  movies MovieGenre[]
+
+  @@map("genres")
+  @@index([slug])
+}
+
+model MovieGenre {
+  movieId Int @map("movie_id")
+  genreId Int @map("genre_id")
+
+  movie   Movie @relation(fields: [movieId], references: [id])
+  genre   Genre @relation(fields: [genreId], references: [id])
+
+  @@id([movieId, genreId])
+  @@map("movie_genres")
+  @@index([movieId])
+  @@index([genreId])
+}
+
+model Person {
+  id        Int       @id @default(autoincrement())
+  name      String
+  slug      String    @unique
+  imageUrl  String?   @map("image_url")
+  bio       String?
+  birthDate DateTime? @map("birth_date") @db.Date
+  userId    Int?      @map("user_id")
+
+  user      User?     @relation(fields: [userId], references: [id])
+
+  movies    MoviePerson[]
+
+  @@map("people")
+  @@index([slug])
+  @@index([name])
+}
+
+model MoviePerson {
+  movieId       Int    @map("movie_id")
+  personId      Int    @map("person_id")
+  role          String // 'director', 'writer', 'cast'
+  characterName String? @map("character_name")
+
+  movie   Movie  @relation(fields: [movieId], references: [id])
+  person  Person @relation(fields: [personId], references: [id])
+
+  @@id([movieId, personId, role])
+  @@map("movie_people")
+  @@index([movieId])
+  @@index([personId])
+  @@index([role])
+}
+
+model Review {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  movieId   Int       @map("movie_id")
+  rating    Int
+  content   String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  user    User  @relation(fields: [userId], references: [id])
+  movie   Movie @relation(fields: [movieId], references: [id])
+
+  @@unique([userId, movieId])
+  @@map("reviews")
+  @@index([movieId])
+  @@index([userId])
+  @@index([rating])
+  @@index([createdAt])
+}
+
+model Comment {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  movieId   Int       @map("movie_id")
+  content   String
+  parentId  Int?      @map("parent_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  user    User      @relation(fields: [userId], references: [id])
+  movie   Movie     @relation(fields: [movieId], references: [id])
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies Comment[] @relation("CommentReplies")
+
+  @@map("comments")
+  @@index([movieId])
+  @@index([userId])
+  @@index([parentId])
+  @@index([createdAt])
+}
+
+model Watchlist {
+  userId    Int      @map("user_id")
+  movieId   Int      @map("movie_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id])
+  movie Movie @relation(fields: [movieId], references: [id])
+
+  @@id([userId, movieId])
+  @@map("watchlist")
+  @@index([userId])
+  @@index([movieId])
+  @@index([createdAt])
+}
+
+model Report {
+  id         Int      @id @default(autoincrement())
+  reporterId Int?     @map("reporter_id")
+  targetType String   @map("target_type") // 'movie', 'user', 'comment', 'review'
+  targetId   Int      @map("target_id")
+  reason     String
+  status     String   @default("pending") // 'pending', 'resolved', 'dismissed'
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  reporter User? @relation(fields: [reporterId], references: [id])
+
+  @@map("reports")
+  @@index([reporterId])
+  @@index([targetType])
+  @@index([targetId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  type      String   // 'system', 'comment_reply', 'movie_approved', 'movie_rejected'
+  title     String
+  message   String?
+  isRead    Boolean  @default(false) @map("is_read")
+  link      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  adminId    Int?     @map("admin_id")
+  action     String   // 'approve_movie', 'ban_user', 'delete_comment'
+  targetType String   @map("target_type")
+  targetId   Int      @map("target_id")
+  details    Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  admin User? @relation(fields: [adminId], references: [id])
+
+  @@map("audit_logs")
+  @@index([adminId])
+  @@index([action])
+  @@index([targetType])
+  @@index([targetId])
+  @@index([createdAt])
+}

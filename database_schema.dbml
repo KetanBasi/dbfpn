@@ -1,0 +1,238 @@
+Table users {
+  id integer [primary key, increment]
+  name varchar // [NEW] Display name
+  username varchar [unique] // Optional for Magic Link
+  email varchar [unique, not null]
+  email_verified timestamp // [NEW] For Magic Link
+  role varchar [not null, default: 'user'] // 'user', 'admin'
+  avatar_url varchar
+  bio text
+  created_at timestamp [default: `now()`]
+  status varchar [default: 'active'] // 'active', 'banned'
+  social_links json // { instagram: '', twitter: '' }
+
+
+  indexes {
+    username
+    email
+    role
+    status
+  }
+}
+
+Table accounts { // [NEW] For NextAuth
+  id integer [primary key, increment]
+  user_id integer [ref: > users.id]
+  type varchar [not null]
+  provider varchar [not null]
+  provider_account_id varchar [not null]
+  refresh_token text
+  access_token text
+  expires_at integer
+  token_type varchar
+  scope varchar
+  id_token text
+  session_state varchar
+
+  indexes {
+    (provider, provider_account_id) [unique]
+    user_id
+  }
+}
+
+Table sessions { // [NEW] For NextAuth
+  id integer [primary key, increment]
+  session_token varchar [unique, not null]
+  user_id integer [ref: > users.id]
+  expires timestamp [not null]
+
+  indexes {
+    user_id
+  }
+}
+
+Table verification_tokens { // [NEW] For Magic Link
+  identifier varchar [not null]
+  token varchar [unique, not null]
+  expires timestamp [not null]
+
+  indexes {
+    (identifier, token) [unique]
+  }
+}
+
+Table movies {
+  id integer [primary key, increment]
+  title varchar [not null]
+  slug varchar [unique, not null]
+  synopsis text
+  release_date date
+  duration integer // in minutes
+  poster_url varchar
+  banner_url varchar // [NEW] Backdrop image
+  trailer_url varchar
+  video_url varchar // [NEW] Full movie URL
+  status varchar [default: 'pending'] // 'pending', 'approved', 'rejected'
+  submitter_id integer [ref: > users.id]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp
+
+  indexes {
+    slug
+    status
+    submitter_id
+    release_date
+    created_at
+  }
+}
+
+Table genres {
+  id integer [primary key, increment]
+  name varchar [unique, not null]
+  slug varchar [unique, not null]
+
+  indexes {
+    slug
+  }
+}
+
+Table movie_genres {
+  movie_id integer [ref: > movies.id]
+  genre_id integer [ref: > genres.id]
+  
+  indexes {
+    (movie_id, genre_id) [pk]
+    movie_id
+    genre_id
+  }
+}
+
+Table people {
+  id integer [primary key, increment]
+  name varchar [not null]
+  slug varchar [unique, not null]
+  image_url varchar
+  bio text
+  birth_date date
+  user_id integer [ref: > users.id, null] // [NEW] Link to registered user
+
+  indexes {
+    slug
+    name
+  }
+}
+
+Table movie_people {
+  movie_id integer [ref: > movies.id]
+  person_id integer [ref: > people.id]
+  role varchar [not null] // 'director', 'writer', 'cast'
+  character_name varchar // for cast
+  
+  indexes {
+    (movie_id, person_id, role) [pk]
+    movie_id
+    person_id
+    role
+  }
+}
+
+Table reviews {
+  id integer [primary key, increment]
+  user_id integer [ref: > users.id]
+  movie_id integer [ref: > movies.id]
+  rating integer [not null] // 1-10
+  content text
+  created_at timestamp [default: `now()`]
+  updated_at timestamp
+  
+  indexes {
+    (user_id, movie_id) [unique] // One review per movie per user
+    movie_id
+    user_id
+    rating
+    created_at
+  }
+}
+
+Table comments {
+  id integer [primary key, increment]
+  user_id integer [ref: > users.id]
+  movie_id integer [ref: > movies.id]
+  content text [not null]
+  parent_id integer [ref: > comments.id, null] // For nested replies
+  created_at timestamp [default: `now()`]
+  updated_at timestamp
+
+  indexes {
+    movie_id
+    user_id
+    parent_id
+    created_at
+  }
+}
+
+Table watchlist {
+  user_id integer [ref: > users.id]
+  movie_id integer [ref: > movies.id]
+  created_at timestamp [default: `now()`]
+  
+  indexes {
+    (user_id, movie_id) [pk]
+    user_id
+    movie_id
+    created_at
+  }
+}
+
+Table reports {
+  id integer [primary key, increment]
+  reporter_id integer [ref: > users.id]
+  target_type varchar [not null] // 'movie', 'user', 'comment', 'review'
+  target_id integer [not null]
+  reason varchar [not null]
+  status varchar [default: 'pending'] // 'pending', 'resolved', 'dismissed'
+  created_at timestamp [default: `now()`]
+
+  indexes {
+    reporter_id
+    target_type
+    target_id
+    status
+    created_at
+  }
+}
+
+Table notifications {
+  id integer [primary key, increment]
+  user_id integer [ref: > users.id]
+  type varchar [not null] // 'system', 'comment_reply', 'movie_approved', 'movie_rejected'
+  title varchar [not null]
+  message text
+  is_read boolean [default: false]
+  link varchar // Optional link to resource
+  created_at timestamp [default: `now()`]
+
+  indexes {
+    user_id
+    is_read
+    created_at
+  }
+}
+
+Table audit_logs {
+  id integer [primary key, increment]
+  admin_id integer [ref: > users.id]
+  action varchar [not null] // 'approve_movie', 'ban_user', 'delete_comment'
+  target_type varchar [not null]
+  target_id integer [not null]
+  details json // Snapshot of changed data or reason
+  created_at timestamp [default: `now()`]
+
+  indexes {
+    admin_id
+    action
+    target_type
+    target_id
+    created_at
+  }
+}
