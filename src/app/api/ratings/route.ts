@@ -1,21 +1,25 @@
 import { NextResponse } from "next/server"
+import { auth } from "@/auth" // pastikan file ini ada
 import prisma from "@/lib/prisma"
 
 export async function POST(req: Request) {
   try {
+    const session = await auth()
     const body = await req.json()
-    const { movieId, userId, rating, comment } = body
+    const { movieId, rating, comment } = body
 
     const mId = Number(movieId)
-    const uId = Number(userId)
     const r = Number(rating)
+    const uId = Number(session?.user?.id)
 
-    const validIds = Number.isInteger(mId) && mId > 0 && Number.isInteger(uId) && uId > 0
-    const validRating = Number.isFinite(r) && r >= 1 && r <= 5
+    if (!session || !uId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
 
-    if (!validIds || !validRating) {
+    const valid = Number.isInteger(mId) && mId > 0 && r >= 1 && r <= 5
+    if (!valid) {
       return NextResponse.json(
-        { error: "Invalid payload", detail: { movieId, userId, rating } },
+        { error: "Invalid payload", detail: { movieId, rating } },
         { status: 400 }
       )
     }
@@ -26,8 +30,9 @@ export async function POST(req: Request) {
       create: { userId: uId, movieId: mId, rating: r, content: comment ?? null },
     })
 
-    return NextResponse.json(review, { status: 201 })
+    return NextResponse.json({ success: true, review }, { status: 201 })
   } catch (e: any) {
+    console.error("POST /api/ratings error:", e)
     return NextResponse.json(
       { error: "Failed to submit review", detail: e?.message },
       { status: 500 }

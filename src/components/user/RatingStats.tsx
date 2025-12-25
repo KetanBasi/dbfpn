@@ -1,74 +1,48 @@
-"use client";
+"use client"
 
-import { useState } from "react";
+type Props = {
+  ratingStats: Record<number, number>
+  totalRatings: number
+}
 
-export default function RatingModal({ movieId, onClose, onSuccess }) {
-  const [rating, setRating] = useState(0);
-  const [content, setContent] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function submit() {
-    if (!rating) return alert("Pilih rating dulu");
-
-    setLoading(true);
-
-    const res = await fetch("/api/reviews", {
-      method: "POST",
-      body: JSON.stringify({ movieId, rating, content }),
-      headers: { "Content-Type": "application/json" },
-    });
-
-    const data = await res.json();
-    setLoading(false);
-
-    if (!res.ok) {
-      alert(data.message || "Gagal submit rating");
-      return;
-    }
-
-    onSuccess?.(data);
-    onClose();
-  }
+export default function RatingStats({ ratingStats, totalRatings }: Props) {
+  const levels = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-      <div className="bg-white p-4 rounded-lg w-80">
-        <h3 className="text-lg font-bold mb-2">Beri Rating</h3>
+    <div className="bg-[#1a1a1a] rounded-2xl border border-gray-800 p-6">
+      <h3 className="text-white font-bold text-lg mb-4">Statistik Rating</h3>
 
-        <div className="flex gap-1 mb-3">
-          {[1,2,3,4,5].map((s) => (
-            <button
-              key={s}
-              onClick={() => setRating(s)}
-              className={`p-2 text-xl ${rating >= s ? "text-yellow-500" : "text-gray-400"}`}
-            >
-              ★
-            </button>
-          ))}
-        </div>
-
-        <textarea
-          className="w-full border rounded p-2 mb-3"
-          placeholder="Tulis komentar..."
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-        />
-
-        <button
-          className="w-full bg-blue-600 text-white py-2 rounded"
-          onClick={submit}
-          disabled={loading}
-        >
-          {loading ? "Mengirim..." : "Submit Rating"}
-        </button>
-
-        <button
-          className="w-full mt-2 text-gray-500"
-          onClick={onClose}
-        >
-          Batal
-        </button>
+      <div className="text-sm text-gray-400 mb-4">
+        Total rating: <span className="text-white font-bold">{totalRatings}</span>
       </div>
+
+      {totalRatings === 0 ? (
+        <p className="text-gray-500 italic">Belum ada rating.</p>
+      ) : (
+        <div className="space-y-2">
+          {levels.map((n) => {
+            const count = ratingStats?.[n] ?? 0
+            const pct = totalRatings > 0 ? Math.round((count / totalRatings) * 100) : 0
+
+            return (
+              <div key={n} className="flex items-center gap-3">
+                <div className="w-8 text-sm text-gray-300 font-bold">{n}</div>
+
+                <div className="flex-1 h-2 rounded-full bg-[#252525] overflow-hidden border border-gray-700">
+                  <div
+                    className="h-full bg-yellow-500"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+
+                <div className="w-14 text-right text-sm text-gray-400">
+                  {count} <span className="text-gray-600">({pct}%)</span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
-  );
+  )
 }

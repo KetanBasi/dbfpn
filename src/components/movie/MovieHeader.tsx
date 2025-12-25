@@ -1,33 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Play, Star, User } from "lucide-react"
 import ReviewModal from "./ReviewModal"
 
 interface MovieHeaderProps {
-<<<<<<< HEAD
-    title: string
-    year: string
-    rating: number
-    posterUrl?: string | null
-    bannerUrl?: string | null
-    trailerUrl?: string | null
-    videoUrl?: string | null
-    synopsis: string
-    director: string
-    directorId?: number | null
-    directorUsername?: string | null
-    writer: string
-    writerId?: number | null
-    writerUsername?: string | null
-    cast: { name: string; role: string; userId?: number | null; username?: string | null }[]
-    genres: string[]
-    duration: string
-    language: string
-    releaseDate: string
-=======
   id: number
   title: string
   year: string
@@ -48,13 +27,18 @@ interface MovieHeaderProps {
   duration: string
   language: string
   releaseDate: string
->>>>>>> 4c8cdff (Add ratings API and rating UI)
 }
 
 function clampRating(v: number) {
   const n = Number(v)
   if (!Number.isFinite(n)) return 0
   return Math.min(5, Math.max(0, n))
+}
+
+function getYoutubeId(url: string) {
+  const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
+  const match = url.match(regExp)
+  return match && match[2]?.length === 11 ? match[2] : null
 }
 
 function CastList({
@@ -94,10 +78,10 @@ function CastList({
       {totalPages > 1 && (
         <div className="flex justify-center gap-2 mt-2">
           <button
+            type="button"
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
             className="p-1 rounded bg-[#252525] text-white disabled:opacity-30 hover:bg-primary hover:text-black transition-colors"
-            type="button"
           >
             &lt;
           </button>
@@ -105,10 +89,10 @@ function CastList({
             {page + 1} / {totalPages}
           </span>
           <button
+            type="button"
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             disabled={page === totalPages - 1}
             className="p-1 rounded bg-[#252525] text-white disabled:opacity-30 hover:bg-primary hover:text-black transition-colors"
-            type="button"
           >
             &gt;
           </button>
@@ -119,27 +103,6 @@ function CastList({
 }
 
 export default function MovieHeader({
-<<<<<<< HEAD
-    title,
-    year,
-    rating: initialRating,
-    posterUrl,
-    bannerUrl,
-    trailerUrl,
-    videoUrl,
-    synopsis,
-    director,
-    directorId,
-    directorUsername,
-    writer,
-    writerId,
-    writerUsername,
-    cast,
-    genres,
-    duration,
-    language,
-    releaseDate,
-=======
   id,
   title,
   year,
@@ -150,17 +113,14 @@ export default function MovieHeader({
   videoUrl,
   synopsis,
   director,
-  directorId,
   directorUsername,
   writer,
-  writerId,
   writerUsername,
   cast,
   genres,
   duration,
   language,
   releaseDate,
->>>>>>> 4c8cdff (Add ratings API and rating UI)
 }: MovieHeaderProps) {
   const [hoverRating, setHoverRating] = useState(0)
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false)
@@ -171,58 +131,15 @@ export default function MovieHeader({
     setRating(clampRating(ratingFromServer))
   }, [ratingFromServer])
 
+  const trailerId = useMemo(() => {
+    return trailerUrl ? getYoutubeId(trailerUrl) : null
+  }, [trailerUrl])
+
   const safeRating = clampRating(rating)
   const safeHover = clampRating(hoverRating)
 
-  const getYoutubeId = (url: string) => {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
-    const match = url.match(regExp)
-    return match && match[2].length === 11 ? match[2] : null
-  }
-
-<<<<<<< HEAD
-    return (
-        <div className="relative">
-            {/* Header Content */}
-            <div className="max-w-7xl mx-auto px-4 py-8">
-                <div className="flex justify-between items-start mb-6">
-                    <div>
-                        <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">{title}</h1>
-                        <span className="text-xl text-gray-400">{year}</span>
-                    </div>
-                    <div className="text-right">
-                        <div className="text-xl font-bold text-white mb-1">Rating</div>
-                        <div className="flex items-center gap-1 text-primary cursor-pointer" onMouseLeave={() => setHoverRating(0)}>
-                            {[...Array(5)].map((_, i) => {
-                                const starValue = i + 1
-                                const isFilled = starValue <= (hoverRating || Math.floor(rating))
-                                return (
-                                    <Star
-                                        key={i}
-                                        size={20}
-                                        fill={isFilled ? "currentColor" : "none"}
-                                        className={isFilled ? "text-primary" : "text-gray-600"}
-                                        onMouseEnter={() => setHoverRating(starValue)}
-                                        onClick={() => setIsReviewModalOpen(true)}
-                                    />
-                                )
-                            })}
-                        </div>
-                        <span className="text-sm text-gray-400">{rating}/5</span>
-                        <ReviewModal
-                            isOpen={isReviewModalOpen}
-                            onClose={() => setIsReviewModalOpen(false)}
-                            movieTitle={title}
-                            initialRating={Math.floor(rating)}
-                        />
-                    </div>
-                </div>
-=======
-  const trailerId = trailerUrl ? getYoutubeId(trailerUrl) : null
   const hasPoster = !!posterUrl
   const hasBanner = !!bannerUrl || !!trailerId
->>>>>>> 4c8cdff (Add ratings API and rating UI)
-
   const isSingleMedia = (hasPoster && !hasBanner) || (!hasPoster && hasBanner)
   const hasNoMedia = !hasPoster && !hasBanner
 
@@ -271,7 +188,11 @@ export default function MovieHeader({
         </div>
 
         {!hasNoMedia ? (
-          <div className={`flex flex-col md:flex-row gap-8 ${isSingleMedia ? "justify-center" : ""} h-auto md:h-[500px]`}>
+          <div
+            className={`flex flex-col md:flex-row gap-8 ${
+              isSingleMedia ? "justify-center" : ""
+            } h-auto md:h-[500px]`}
+          >
             {hasPoster && (
               <div
                 className={`relative w-full md:w-auto md:aspect-[2/3] h-[500px] md:h-full rounded-lg overflow-hidden shadow-2xl border-4 border-white/10 shrink-0 ${
@@ -283,7 +204,11 @@ export default function MovieHeader({
             )}
 
             {hasBanner && (
-              <div className={`relative w-full ${isSingleMedia ? "md:w-[800px]" : "md:flex-1"} h-[300px] md:h-full rounded-lg overflow-hidden bg-black border border-gray-800`}>
+              <div
+                className={`relative w-full ${
+                  isSingleMedia ? "md:w-[800px]" : "md:flex-1"
+                } h-[300px] md:h-full rounded-lg overflow-hidden bg-black border border-gray-800`}
+              >
                 {isPlayingTrailer && trailerId ? (
                   <iframe
                     width="100%"
@@ -295,7 +220,10 @@ export default function MovieHeader({
                     className="absolute inset-0"
                   />
                 ) : (
-                  <div className="relative w-full h-full group cursor-pointer" onClick={() => trailerId && setIsPlayingTrailer(true)}>
+                  <div
+                    className="relative w-full h-full group cursor-pointer"
+                    onClick={() => trailerId && setIsPlayingTrailer(true)}
+                  >
                     {bannerUrl ? (
                       <Image
                         src={bannerUrl}
@@ -316,6 +244,7 @@ export default function MovieHeader({
                             <Play size={40} className="text-white fill-white ml-1" />
                           </div>
                         </div>
+
                         <div className="absolute top-4 left-0 right-0 text-center">
                           <h2 className="text-3xl md:text-5xl font-bold text-primary/80 drop-shadow-lg uppercase tracking-widest">
                             {title}
@@ -355,7 +284,10 @@ export default function MovieHeader({
                 <div className="bg-[#252525] p-3 rounded-lg flex justify-between items-center">
                   <span className="text-gray-500 text-sm">Sutradara</span>
                   {directorUsername ? (
-                    <Link href={`/user/${directorUsername}`} className="text-primary font-medium hover:underline flex items-center gap-1">
+                    <Link
+                      href={`/user/${directorUsername}`}
+                      className="text-primary font-medium hover:underline flex items-center gap-1"
+                    >
                       <User size={14} /> {director}
                     </Link>
                   ) : (
@@ -366,7 +298,10 @@ export default function MovieHeader({
                 <div className="bg-[#252525] p-3 rounded-lg flex justify-between items-center">
                   <span className="text-gray-500 text-sm">Penulis</span>
                   {writerUsername ? (
-                    <Link href={`/user/${writerUsername}`} className="text-primary font-medium hover:underline flex items-center gap-1">
+                    <Link
+                      href={`/user/${writerUsername}`}
+                      className="text-primary font-medium hover:underline flex items-center gap-1"
+                    >
                       <User size={14} /> {writer}
                     </Link>
                   ) : (
@@ -396,20 +331,28 @@ export default function MovieHeader({
             )}
 
             <div className="bg-[#1a1a1a] p-6 rounded-xl h-fit border border-gray-800">
-              <h3 className="text-white font-bold mb-4 border-b border-gray-700 pb-2">Info Film</h3>
+              <h3 className="text-white font-bold mb-4 border-b border-gray-700 pb-2">
+                Info Film
+              </h3>
+
               <div className="space-y-4 text-sm">
                 <div>
                   <div className="text-gray-500 mb-1">Durasi</div>
-                  <div className="text-white font-medium">{duration && duration !== "0m" ? duration : "TBA"}</div>
+                  <div className="text-white font-medium">
+                    {duration && duration !== "0m" ? duration : "TBA"}
+                  </div>
                 </div>
+
                 <div>
                   <div className="text-gray-500 mb-1">Bahasa</div>
                   <div className="text-white font-medium">{language}</div>
                 </div>
+
                 <div>
                   <div className="text-gray-500 mb-1">Tanggal Rilis</div>
                   <div className="text-white font-medium">{releaseDate}</div>
                 </div>
+
                 <div>
                   <div className="text-gray-500 mb-1">Produksi</div>
                   <div className="text-white font-medium">DBFPN Studios</div>

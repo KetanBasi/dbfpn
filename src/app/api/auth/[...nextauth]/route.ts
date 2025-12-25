@@ -1,5 +1,2 @@
-import { NextResponse } from "next/server"
-
-export async function GET() {
-  return NextResponse.json({ ok: true, message: "API root works" })
-}
+import { handlers } from "@/auth"
+export const { GET, POST } = handlers
