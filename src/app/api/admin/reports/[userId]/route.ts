@@ -2,8 +2,9 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { auth } from "@/auth"
 
-export async function GET(_: Request, { params }: { params: { userId: string } }) {
+export async function GET(_: Request, { params }: { params: Promise<{ userId: string }> }) {
   try {
+    const { userId: userIdParam } = await params
     const session = await auth()
     const rawId = (session?.user as any)?.id
     const adminId = Number(rawId)
@@ -21,7 +22,7 @@ export async function GET(_: Request, { params }: { params: { userId: string } }
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const userId = Number(params.userId)
+    const userId = Number(userIdParam)
     if (!Number.isInteger(userId) || userId <= 0) {
       return NextResponse.json({ error: "userId tidak valid" }, { status: 400 })
     }

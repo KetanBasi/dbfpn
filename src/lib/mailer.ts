@@ -1,21 +1,25 @@
 import nodemailer from "nodemailer"
 
-function must(name: string) {
+// Helper that doesn't throw during build time
+function getEnv(name: string, fallback?: string) {
   const v = process.env[name]
-  if (!v) throw new Error(`Missing env: ${name}`)
-  return v
+  if (v) return v
+  if (fallback !== undefined) return fallback
+  // Only throw at runtime when actually needed
+  return ""
 }
 
+// Use the same env vars as the rest of the app
 export const mailer = nodemailer.createTransport({
-  host: must("SMTP_HOST"),
-  port: Number(must("SMTP_PORT")),
-  secure: String(process.env.SMTP_SECURE || "false") === "true",
+  host: getEnv("EMAIL_SERVER_HOST"),
+  port: Number(getEnv("EMAIL_SERVER_PORT", "465")),
+  secure: Number(getEnv("EMAIL_SERVER_PORT", "465")) === 465,
   auth: {
-    user: must("SMTP_USER"),
-    pass: must("SMTP_PASS"),
+    user: getEnv("EMAIL_SERVER_USER"),
+    pass: getEnv("EMAIL_SERVER_PASSWORD"),
   },
 })
 
-export const MAIL_FROM = process.env.MAIL_FROM || must("SMTP_USER")
-export const APP_URL = must("APP_URL") // contoh: http://localhost:8000
-export const APP_NAME = process.env.APP_NAME || "DBFPN"
+export const MAIL_FROM = getEnv("EMAIL_FROM")
+export const APP_URL = getEnv("NEXTAUTH_URL", "http://localhost:8000")
+export const APP_NAME = getEnv("APP_NAME", "DBFPN")

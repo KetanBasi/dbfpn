@@ -1,18 +1,18 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import RatingModal from "@/components/RatingModal";
+import { useState } from "react"
+import RatingModal from "@/components/movie/RatingModal"
 
 type Movie = {
-  id: number;
-};
+  id: number
+}
 
 type MoviePageProps = {
-  movie: Movie;
-};
+  movie: Movie
+}
 
 export default function MoviePage({ movie }: MoviePageProps) {
-  const [showRating, setShowRating] = useState(false);
+  const [showRating, setShowRating] = useState(false)
 
   return (
     <>
@@ -25,14 +25,16 @@ export default function MoviePage({ movie }: MoviePageProps) {
 
       {showRating && (
         <RatingModal
+          open={showRating}
           movieId={movie.id}
+          userId={0}
           onClose={() => setShowRating(false)}
-          onSuccess={(data) => {
-            console.log("Rating OK:", data);
+          onSuccess={() => {
+            console.log("Rating OK")
             // TODO: Refetch rating stats
           }}
         />
       )}
     </>
-  );
+  )
 }

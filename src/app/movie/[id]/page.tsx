@@ -7,9 +7,9 @@ import { notFound } from "next/navigation"
 export default async function MovieDetail({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const { id } = params
+  const { id } = await params
   const isNumeric = /^\d+$/.test(id)
 
   const movie = await prisma.movie.findFirst({
@@ -81,10 +81,10 @@ export default async function MovieDetail({
         releaseDate={
           movie.releaseDate
             ? new Date(movie.releaseDate).toLocaleDateString("id-ID", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })
             : "Coming Soon"
         }
       />

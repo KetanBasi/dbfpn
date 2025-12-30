@@ -2,11 +2,12 @@ import Image from "next/image"
 import { Calendar, User, Clock } from "lucide-react"
 import CommentsSection from "@/components/movie/CommentsSection"
 
-export default function NewsArticle({ params }: { params: { slug: string } }) {
+export default async function NewsArticle({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params
     // Mock Article Data
     const article = {
         title: "Pengabdi Setan 3: Konfirmasi Joko Anwar Tentang Kelanjutan Kisah Ibu",
-        slug: params.slug,
+        slug: slug,
         image: "https://images.unsplash.com/photo-1509347528160-9a9e33742cd4?q=80&w=2070&auto=format&fit=crop",
         writer: "Budi Santoso",
         date: "28 November 2025",

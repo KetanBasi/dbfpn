@@ -3,12 +3,13 @@ import { notFound } from "next/navigation"
 import prisma from "@/lib/prisma"
 import { Star } from "lucide-react"
 
-export default async function UserReviewsPage({ params }: { params: { username: string } }) {
+export default async function UserReviewsPage({ params }: { params: Promise<{ username: string }> }) {
+  const { username } = await params
   const user = await prisma.user.findFirst({
     where: {
       OR: [
-        { username: params.username },
-        { id: !isNaN(Number(params.username)) ? Number(params.username) : undefined },
+        { username: username },
+        { id: !isNaN(Number(username)) ? Number(username) : undefined },
       ],
     },
     select: {
@@ -47,7 +48,7 @@ export default async function UserReviewsPage({ params }: { params: { username: 
           </div>
 
           <Link
-            href={`/user/${encodeURIComponent(params.username)}`}
+            href={`/user/${encodeURIComponent(username)}`}
             className="px-3 py-2 rounded-lg bg-[#252525] hover:bg-[#333] border border-gray-700 text-white text-sm"
           >
             Kembali ke profil

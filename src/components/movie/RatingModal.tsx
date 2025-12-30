@@ -35,9 +35,6 @@ export default function RatingModal({
   const [comment, setComment] = useState(initialComment)
   const [loading, setLoading] = useState(false)
 
-  // Jangan render apa pun kalau modal tertutup
-  if (!open) return null
-
   // Reset state tiap modal dibuka (biar ga nyangkut nilai lama)
   useEffect(() => {
     if (!open) return
@@ -76,6 +73,9 @@ export default function RatingModal({
       document.removeEventListener("mousedown", onDown)
     }
   }, [open, loading, onClose])
+
+  // Jangan render apa pun kalau modal tertutup (after hooks!)
+  if (!open) return null
 
   const display = clamp(hover || rating)
 

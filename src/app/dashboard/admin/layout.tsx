@@ -1,7 +1,5 @@
 import { auth } from "@/auth"
-import { notFound, redirect } from "next/navigation"
-
-export const dynamic = "force-dynamic"
+import { redirect, notFound } from "next/navigation"
 
 export default async function AdminLayout({
     children,
@@ -14,9 +12,12 @@ export default async function AdminLayout({
         redirect("/signin")
     }
 
-    if (session.user.role !== "admin") {
+    // Check admin role
+    const userRole = (session.user as any).role
+    if (userRole !== "admin") {
         notFound()
     }
 
+    // Just pass children through - layout wrapper already applied by parent
     return <>{children}</>
 }

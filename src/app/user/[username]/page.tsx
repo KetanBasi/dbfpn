@@ -7,12 +7,13 @@ import RatingStats from "@/components/user/RatingStats"
 import { auth } from "@/auth"
 import ReportUserButton from "@/components/user/ReportUserButton"
 
-export default async function UserProfile({ params }: { params: { username: string } }) {
+export default async function UserProfile({ params }: { params: Promise<{ username: string }> }) {
+  const { username } = await params
   const session = await auth()
   const viewerIdRaw = (session?.user as any)?.id
   const viewerId = Number.isFinite(Number(viewerIdRaw)) ? Number(viewerIdRaw) : null
 
-  // ambil role viewer dari DB, jangan percaya session
+  // Get viewer role from DB, don't trust session
   let isAdminViewer = false
   if (viewerId) {
     const viewer = await prisma.user.findUnique({
@@ -25,8 +26,8 @@ export default async function UserProfile({ params }: { params: { username: stri
   const user = await prisma.user.findFirst({
     where: {
       OR: [
-        { username: params.username },
-        { id: !isNaN(Number(params.username)) ? Number(params.username) : undefined },
+        { username: username },
+        { id: !isNaN(Number(username)) ? Number(username) : undefined },
       ],
     },
     include: {
@@ -59,24 +60,19 @@ export default async function UserProfile({ params }: { params: { username: stri
 
   const displayName = user.username || user.email.split("@")[0]
 
-  // rating stats
+  // Rating stats with 1-5 scale
   const allRatings = await prisma.review.findMany({
     where: { userId: user.id },
     select: { rating: true },
   })
 
-  const ratingStats: Record<number, number> = {
-    1: 0, 2: 0, 3: 0, 4: 0, 5: 0,
-    6: 0, 7: 0, 8: 0, 9: 0, 10: 0,
-  }
-
+  const ratingStats: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
   allRatings.forEach((r) => {
     if (ratingStats[r.rating] !== undefined) ratingStats[r.rating]++
   })
-
   const totalRatings = allRatings.length
 
-  const reviewsLink = `/user/${encodeURIComponent(params.username)}/reviews`
+  const reviewsLink = `/user/${encodeURIComponent(username)}/reviews`
   const adminModerationLink = `/dashboard/admin/moderation?userId=${user.id}`
 
   const roleLabel = user.role === "admin" ? "Admin" : "Anggota"
@@ -242,11 +238,11 @@ export default async function UserProfile({ params }: { params: { username: stri
                             </p>
                           </div>
                           <div className="flex items-center gap-1 bg-yellow-500/10 text-yellow-500 px-2 py-1 rounded text-sm font-bold">
-                            <Star size={14} fill="currentColor" /> {review.rating}
+                            <Star size={14} fill="currentColor" /> {review.rating}/5
                           </div>
                         </div>
                         <p className="text-gray-300 italic">
-                          "{review.content || "Tidak ada komentar"}"
+                          &quot;{review.content || "Tidak ada komentar"}&quot;
                         </p>
                       </div>
                     ))

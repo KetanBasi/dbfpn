@@ -1,10 +1,9 @@
-import DashboardLayout from "@/components/dashboard/DashboardLayout"
 import Link from "next/link"
 import { Settings as SettingsIcon, Globe, Lock, Database } from "lucide-react"
 
 export default function AdminSettings() {
     return (
-        <DashboardLayout>
+        <>
             <h1 className="text-3xl font-bold text-white mb-8">Pengaturan Platform</h1>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -76,6 +75,6 @@ export default function AdminSettings() {
                     Buka Pengaturan Akun
                 </Link>
             </div>
-        </DashboardLayout>
+        </>
     )
 }

@@ -1,12 +1,12 @@
 // src/lib/db.ts
 // PostgreSQL query helper using the pg library
-import { Pool, QueryResult } from "pg"
+import { Pool, QueryResult, QueryResultRow } from "pg"
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 })
 
-export async function query<T = any>(
+export async function query<T extends QueryResultRow = QueryResultRow>(
   text: string,
   params?: any[]
 ): Promise<QueryResult<T>> {

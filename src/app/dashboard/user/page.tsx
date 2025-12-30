@@ -1,4 +1,3 @@
-import DashboardLayout from "@/components/dashboard/DashboardLayout"
 import { Clock, Star, Film } from "lucide-react"
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
@@ -25,9 +24,9 @@ export default async function UserDashboard() {
 
   const joinDate = dbUser?.createdAt
     ? new Date(dbUser.createdAt).toLocaleDateString("id-ID", {
-        month: "long",
-        year: "numeric",
-      })
+      month: "long",
+      year: "numeric",
+    })
     : "-"
 
   const recentReviews = await prisma.review.findMany({
@@ -38,7 +37,7 @@ export default async function UserDashboard() {
   })
 
   return (
-    <DashboardLayout user={dbUser}>
+    <>
       <h1 className="text-3xl font-bold text-white mb-8">Ringkasan</h1>
 
       {/* Profile Card */}
@@ -165,6 +164,6 @@ export default async function UserDashboard() {
           )}
         </div>
       </div>
-    </DashboardLayout>
+    </>
   )
 }

@@ -1,17 +1,38 @@
 import { Star, Filter } from "lucide-react"
 import Link from "next/link"
+import prisma from "@/lib/prisma"
+import Image from "next/image"
 
-export default function Top100() {
-    // Mock Data Generator
-    const movies = Array.from({ length: 20 }, (_, i) => ({
-        id: i + 1,
-        rank: i + 1,
-        title: `Top Movie ${i + 1}`,
-        year: 2020 + (i % 5),
-        rating: (9.9 - (i * 0.1)).toFixed(1),
-        director: "Famous Director",
-        image: `https://placehold.co/150x225/252525/white.png?text=Movie+${i + 1}`
-    }))
+// Force dynamic rendering to avoid database connection exhaustion during build
+export const dynamic = "force-dynamic"
+
+export default async function Top100() {
+    // Fetch approved movies with their reviews to calculate average rating
+    const movies = await prisma.movie.findMany({
+        where: { status: "approved" },
+        include: {
+            reviews: {
+                select: { rating: true }
+            },
+            people: {
+                where: { role: "director" },
+                include: { person: true },
+                take: 1
+            }
+        }
+    })
+
+    // Calculate average rating and sort by it
+    const moviesWithRating = movies.map(movie => {
+        const avgRating = movie.reviews.length > 0
+            ? movie.reviews.reduce((sum, r) => sum + r.rating, 0) / movie.reviews.length
+            : 0
+        return {
+            ...movie,
+            avgRating,
+            director: movie.people[0]?.person?.name || "Unknown"
+        }
+    }).sort((a, b) => b.avgRating - a.avgRating).slice(0, 100)
 
     return (
         <div className="min-h-screen bg-black text-white font-sans selection:bg-primary selection:text-black flex flex-col">
@@ -35,29 +56,37 @@ export default function Top100() {
                     </div>
 
                     <div className="space-y-4">
-                        {movies.map((movie) => (
-                            <Link href={`/movie/${movie.id}`} key={movie.id} className="bg-[#1a1a1a] rounded-xl p-4 flex gap-6 hover:bg-[#252525] transition-colors group cursor-pointer border border-transparent hover:border-gray-800">
-                                <div className="text-4xl font-bold text-gray-700 w-16 flex items-center justify-center shrink-0 group-hover:text-primary transition-colors">
-                                    {movie.rank}
-                                </div>
-                                <img src={movie.image} alt={movie.title} className="w-24 h-36 object-cover rounded-lg shadow-lg" />
-                                <div className="flex-1 py-2">
-                                    <h2 className="text-2xl font-bold text-white mb-1 group-hover:text-primary transition-colors">{movie.title}</h2>
-                                    <div className="text-gray-400 mb-4">{movie.year} • {movie.director}</div>
-                                    <div className="flex items-center gap-2">
-                                        <Star className="text-yellow-500 fill-yellow-500" size={20} />
-                                        <span className="text-xl font-bold text-white">{movie.rating}</span>
-                                        <span className="text-sm text-gray-500">/ 10</span>
+                        {moviesWithRating.length > 0 ? (
+                            moviesWithRating.map((movie, index) => (
+                                <Link href={`/movie/${movie.slug}`} key={movie.id} className="bg-[#1a1a1a] rounded-xl p-4 flex gap-6 hover:bg-[#252525] transition-colors group cursor-pointer border border-transparent hover:border-gray-800">
+                                    <div className="text-4xl font-bold text-gray-700 w-16 flex items-center justify-center shrink-0 group-hover:text-primary transition-colors">
+                                        {index + 1}
                                     </div>
-                                </div>
-                            </Link>
-                        ))}
-                    </div>
-
-                    <div className="mt-12 text-center">
-                        <button className="px-8 py-3 bg-[#1a1a1a] border border-gray-800 rounded-full text-white font-bold hover:bg-white hover:text-black transition-colors">
-                            Muat Lebih Banyak
-                        </button>
+                                    <div className="w-24 h-36 bg-gray-800 rounded-lg overflow-hidden relative shrink-0">
+                                        {movie.posterUrl ? (
+                                            <Image src={movie.posterUrl} alt={movie.title} fill className="object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">No Poster</div>
+                                        )}
+                                    </div>
+                                    <div className="flex-1 py-2">
+                                        <h2 className="text-2xl font-bold text-white mb-1 group-hover:text-primary transition-colors">{movie.title}</h2>
+                                        <div className="text-gray-400 mb-4">{movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "TBA"} • {movie.director}</div>
+                                        <div className="flex items-center gap-2">
+                                            <Star className="text-yellow-500 fill-yellow-500" size={20} />
+                                            <span className="text-xl font-bold text-white">{movie.avgRating.toFixed(1)}</span>
+                                            <span className="text-sm text-gray-500">/ 5</span>
+                                            <span className="text-xs text-gray-600 ml-2">({movie.reviews.length} ulasan)</span>
+                                        </div>
+                                    </div>
+                                </Link>
+                            ))
+                        ) : (
+                            <div className="text-center py-16 text-gray-500">
+                                <p className="text-xl mb-2">Belum ada film dengan rating</p>
+                                <p>Jadilah yang pertama memberikan ulasan!</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </main>

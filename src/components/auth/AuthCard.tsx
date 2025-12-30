@@ -1,23 +1,50 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Mail, ArrowLeft, CheckCircle, ArrowRight } from "lucide-react"
 import { signIn } from "next-auth/react"
 import { checkUserExists } from "@/app/actions/auth"
+import { initiateRegistration, verifyOTP, resendOTP } from "@/app/actions/registration"
 import { useToast } from "@/components/ui/Toast"
+import { useRouter } from "next/navigation"
 
-type AuthState = "landing" | "signin" | "signup" | "verify"
+type AuthState = "landing" | "signin" | "signup" | "otp" | "verify"
 
 export default function AuthCard() {
     const [authState, setAuthState] = useState<AuthState>("landing")
     const [email, setEmail] = useState("")
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
+    const [otpValues, setOtpValues] = useState<string[]>(["", "", "", "", "", ""])
+    const [resendTimer, setResendTimer] = useState(0)
+    const [callbackUrl, setCallbackUrl] = useState<string | undefined>(undefined)
     const { showToast } = useToast()
+    const router = useRouter()
+    const otpInputRefs = useRef<(HTMLInputElement | null)[]>([])
+
+    // Get callback URL from query params on mount
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search)
+        const callback = params.get("callbackUrl")
+        if (callback) {
+            setCallbackUrl(callback)
+        }
+    }, [])
+
+    // Resend timer countdown
+    useEffect(() => {
+        if (resendTimer > 0) {
+            const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000)
+            return () => clearTimeout(timer)
+        }
+    }, [resendTimer])
 
     const handleBack = () => {
-        if (authState === "verify") {
-            setAuthState("landing") // Go back to start after verify
+        if (authState === "otp") {
+            setAuthState("signup")
+            setOtpValues(["", "", "", "", "", ""])
+        } else if (authState === "verify") {
+            setAuthState("landing")
         } else {
             setAuthState("landing")
         }
@@ -50,7 +77,7 @@ export default function AuthCard() {
             const result = await signIn("nodemailer", {
                 email,
                 redirect: false,
-                callbackUrl: "/dashboard",
+                callbackUrl: callbackUrl || "/dashboard",
             })
 
             if (result?.error) {
@@ -75,26 +102,111 @@ export default function AuthCard() {
 
         setIsLoading(true)
         try {
-            // 1. Check if user exists
-            const exists = await checkUserExists(email)
-            if (exists) {
-                setError("Email sudah terdaftar. Silakan masuk.")
+            const result = await initiateRegistration(email, callbackUrl)
+
+            if (result.error) {
+                if (result.error === "profile_incomplete") {
+                    // User exists but hasn't completed profile
+                    showToast("Silakan lengkapi profil Anda.", "info")
+                    router.push(`/complete-profile?callbackUrl=${encodeURIComponent(callbackUrl || "/dashboard")}`)
+                } else {
+                    setError(result.error)
+                }
                 setIsLoading(false)
                 return
             }
 
-            // 2. Send Magic Link (creates user)
-            const result = await signIn("nodemailer", {
-                email,
-                redirect: false,
-                callbackUrl: "/dashboard",
-            })
+            // Success - move to OTP input
+            setAuthState("otp")
+            setResendTimer(60)
+            showToast("Kode OTP telah dikirim ke email Anda.", "success")
+        } catch (err) {
+            console.error(err)
+            showToast("Terjadi kesalahan.", "error")
+        } finally {
+            setIsLoading(false)
+        }
+    }
 
-            if (result?.error) {
-                showToast("Gagal mengirim email pendaftaran.", "error")
-            } else {
-                setAuthState("verify")
+    const handleOTPChange = (index: number, value: string) => {
+        // Only allow digits
+        if (value && !/^\d+$/.test(value)) return
+
+        const newOtpValues = [...otpValues]
+
+        // Handle paste - if pasting a full OTP
+        if (value.length > 1) {
+            const digits = value.slice(0, 6).split("")
+            digits.forEach((digit, i) => {
+                if (i < 6) newOtpValues[i] = digit
+            })
+            setOtpValues(newOtpValues)
+            // Focus last filled input or the 6th input
+            const lastIndex = Math.min(digits.length - 1, 5)
+            otpInputRefs.current[lastIndex]?.focus()
+            return
+        }
+
+        newOtpValues[index] = value
+        setOtpValues(newOtpValues)
+
+        // Auto-focus next input
+        if (value && index < 5) {
+            otpInputRefs.current[index + 1]?.focus()
+        }
+    }
+
+    const handleOTPKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Backspace" && !otpValues[index] && index > 0) {
+            otpInputRefs.current[index - 1]?.focus()
+        }
+    }
+
+    const handleVerifyOTP = async () => {
+        const otp = otpValues.join("")
+        if (otp.length !== 6) {
+            setError("Masukkan 6 digit kode OTP")
+            return
+        }
+
+        setError("")
+        setIsLoading(true)
+        try {
+            const result = await verifyOTP(email, otp)
+
+            if (result.error) {
+                setError(result.error)
+                setIsLoading(false)
+                return
             }
+
+            // Success - redirect to complete profile
+            showToast("Email berhasil diverifikasi!", "success")
+            const redirectUrl = result.callbackUrl || callbackUrl || "/dashboard"
+            router.push(`/complete-profile?callbackUrl=${encodeURIComponent(redirectUrl)}`)
+        } catch (err) {
+            console.error(err)
+            showToast("Terjadi kesalahan.", "error")
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    const handleResendOTP = async () => {
+        if (resendTimer > 0) return
+
+        setIsLoading(true)
+        try {
+            const result = await resendOTP(email)
+
+            if (result.error) {
+                showToast(result.error, "error")
+                return
+            }
+
+            showToast("Kode OTP baru telah dikirim.", "success")
+            setResendTimer(60)
+            setOtpValues(["", "", "", "", "", ""])
         } catch (err) {
             console.error(err)
             showToast("Terjadi kesalahan.", "error")
@@ -197,7 +309,7 @@ export default function AuthCard() {
 
             {authState === "signup" && (
                 <div className="text-center space-y-6">
-                    <h2 className="text-2xl font-bold text-white">Daftar</h2>
+                    <h2 className="text-2xl font-bold text-white">Buat Akun</h2>
 
                     <div className="space-y-4">
                         <div className={`bg-[#333] rounded-lg p-3 flex items-center gap-3 border transition-colors text-left ${error ? "border-red-500" : "border-gray-700 focus-within:border-primary"}`}>
@@ -244,6 +356,59 @@ export default function AuthCard() {
                 </div>
             )}
 
+            {authState === "otp" && (
+                <div className="text-center space-y-6">
+                    <h2 className="text-2xl font-bold text-white">Verifikasi Email</h2>
+                    <p className="text-gray-400 text-sm">
+                        Masukkan kode 6 digit yang telah dikirim ke <strong className="text-white">{email}</strong>
+                    </p>
+
+                    <div className="space-y-4">
+                        {/* OTP Input */}
+                        <div className="flex justify-center gap-2">
+                            {otpValues.map((value, index) => (
+                                <input
+                                    key={index}
+                                    ref={(el) => { otpInputRefs.current[index] = el }}
+                                    type="text"
+                                    inputMode="numeric"
+                                    maxLength={6}
+                                    value={value}
+                                    onChange={(e) => handleOTPChange(index, e.target.value)}
+                                    onKeyDown={(e) => handleOTPKeyDown(index, e)}
+                                    className={`w-12 h-14 text-center text-xl font-bold bg-[#333] border rounded-lg text-white focus:outline-none transition-colors ${error ? "border-red-500" : "border-gray-700 focus:border-primary"
+                                        }`}
+                                />
+                            ))}
+                        </div>
+                        {error && <p className="text-red-500 text-xs">{error}</p>}
+
+                        <button
+                            onClick={handleVerifyOTP}
+                            disabled={isLoading || otpValues.join("").length !== 6}
+                            className="w-full bg-primary text-black font-bold py-3 rounded-full hover:bg-yellow-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isLoading ? "Memverifikasi..." : "Verifikasi"}
+                        </button>
+
+                        {/* Resend OTP */}
+                        <div className="text-sm text-gray-400">
+                            {resendTimer > 0 ? (
+                                <span>Kirim ulang kode dalam {resendTimer} detik</span>
+                            ) : (
+                                <button
+                                    onClick={handleResendOTP}
+                                    disabled={isLoading}
+                                    className="text-primary hover:underline disabled:opacity-50"
+                                >
+                                    Kirim ulang kode
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {authState === "verify" && (
                 <div className="text-center space-y-6">
                     <div className="flex justify-center">
@@ -279,4 +444,3 @@ export default function AuthCard() {
         </div>
     )
 }
-

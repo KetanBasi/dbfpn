@@ -7,8 +7,9 @@ import ReportDetailButton from "@/components/admin/ReportDetailButton"
 export default async function AdminUserDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params
   const session = await auth()
   const rawAdminId = (session?.user as any)?.id
   const adminId = Number(rawAdminId)
@@ -21,7 +22,7 @@ export default async function AdminUserDetailPage({
   })
   if (!me || me.role !== "admin") redirect("/dashboard/user")
 
-  const userId = Number(params.id)
+  const userId = Number(id)
   if (!Number.isInteger(userId)) redirect("/dashboard/admin/moderation")
 
   const [u, reportsCount, lastReport] = await Promise.all([
@@ -60,11 +61,10 @@ export default async function AdminUserDetailPage({
 
               <div className="mt-3 flex gap-2">
                 <span
-                  className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
-                    u.status === "banned"
+                  className={`px-2 py-0.5 rounded-full text-xs font-bold border ${u.status === "banned"
                       ? "bg-red-500/10 text-red-400 border-red-500/20"
                       : "bg-green-500/10 text-green-400 border-green-500/20"
-                  }`}
+                    }`}
                 >
                   {u.status}
                 </span>
@@ -91,12 +91,12 @@ export default async function AdminUserDetailPage({
               <div className="text-sm mt-1">
                 {lastReport?.createdAt
                   ? new Date(lastReport.createdAt).toLocaleString("id-ID", {
-                      day: "2-digit",
-                      month: "long",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
                   : "-"}
               </div>
               <div className="text-gray-500 text-xs mt-2 line-clamp-2">

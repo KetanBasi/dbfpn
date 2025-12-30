@@ -1,16 +1,8 @@
-import DashboardLayout from "@/components/dashboard/DashboardLayout"
 import { Users, Film, MessageSquare, AlertTriangle } from "lucide-react"
-import { auth } from "@/auth"
-import prisma from "@/lib/prisma"
 
 export default async function AdminDashboard() {
-    const session = await auth()
-    const user = await prisma.user.findUnique({
-        where: { id: Number(session?.user?.id) }
-    })
-
     return (
-        <DashboardLayout user={user}>
+        <>
             <h1 className="text-3xl font-bold text-white mb-8">Ringkasan Admin</h1>
 
             {/* Stats Grid */}
@@ -110,6 +102,6 @@ export default async function AdminDashboard() {
                     </div>
                 </div>
             </div>
-        </DashboardLayout>
+        </>
     )
 }

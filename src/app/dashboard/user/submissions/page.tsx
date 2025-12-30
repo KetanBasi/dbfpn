@@ -1,4 +1,3 @@
-import DashboardLayout from "@/components/dashboard/DashboardLayout"
 import Link from "next/link"
 import { Upload, Edit, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react"
 import { auth } from "@/auth"
@@ -7,9 +6,6 @@ import Image from "next/image"
 
 export default async function MySubmissions() {
     const session = await auth()
-    const user = await prisma.user.findUnique({
-        where: { id: Number(session?.user?.id) }
-    })
 
     const submissions = await prisma.movie.findMany({
         where: { submitterId: Number(session?.user?.id) },
@@ -33,7 +29,7 @@ export default async function MySubmissions() {
     }
 
     return (
-        <DashboardLayout user={user}>
+        <>
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold text-white">Kiriman Saya</h1>
                 <Link
@@ -130,6 +126,6 @@ export default async function MySubmissions() {
                     )}
                 </div>
             </div>
-        </DashboardLayout>
+        </>
     )
 }
