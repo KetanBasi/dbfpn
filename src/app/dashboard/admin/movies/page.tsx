@@ -1,116 +1,212 @@
-import { Search, Filter, MoreHorizontal, Edit, Trash2, Eye } from "lucide-react"
+import { redirect } from "next/navigation"
+import { auth } from "@/auth"
+import prisma from "@/lib/prisma"
+import Image from "next/image"
+import Link from "next/link"
+import { Film, Clock, CheckCircle, XCircle, AlertCircle, Eye } from "lucide-react"
+import MovieModerationActions from "@/components/admin/MovieModerationActions"
 
-export default function AdminMovies() {
+// Helper component to display movie image with fallback
+function MovieImage({ movie }: { movie: { posterUrl: string | null, bannerUrl: string | null, title: string } }) {
+    if (movie.posterUrl) {
+        return <Image src={movie.posterUrl} alt={movie.title} fill className="object-cover" />
+    }
+    if (movie.bannerUrl) {
+        return <Image src={movie.bannerUrl} alt={movie.title} fill className="object-cover" />
+    }
+    const initials = movie.title
+        .split(' ')
+        .slice(0, 2)
+        .map(word => word.charAt(0).toUpperCase())
+        .join('')
+
+    return (
+        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900 text-gray-300 text-lg font-bold">
+            {initials || 'M'}
+        </div>
+    )
+}
+
+const StatusBadge = ({ status }: { status: string }) => {
+    switch (status) {
+        case 'pending':
+            return <span className="flex items-center gap-1 text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded text-xs font-bold"><Clock size={12} /> Menunggu</span>
+        case 'approved':
+            return <span className="flex items-center gap-1 text-green-500 bg-green-500/10 px-2 py-1 rounded text-xs font-bold"><CheckCircle size={12} /> Disetujui</span>
+        case 'rejected':
+            return <span className="flex items-center gap-1 text-red-500 bg-red-500/10 px-2 py-1 rounded text-xs font-bold"><XCircle size={12} /> Ditolak</span>
+        case 'revision':
+            return <span className="flex items-center gap-1 text-orange-500 bg-orange-500/10 px-2 py-1 rounded text-xs font-bold"><AlertCircle size={12} /> Revisi</span>
+        default:
+            return null
+    }
+}
+
+export default async function AdminMovies() {
+    const session = await auth()
+    const rawId = (session?.user as any)?.id
+    const adminId = Number(rawId)
+
+    if (!session || !Number.isFinite(adminId)) redirect("/signin")
+
+    const me = await prisma.user.findUnique({
+        where: { id: adminId },
+        select: { role: true }
+    })
+
+    if (!me || me.role !== "admin") redirect("/dashboard/user")
+
+    // Fetch movies awaiting moderation (pending and revision)
+    const pendingMovies = await prisma.movie.findMany({
+        where: {
+            status: { in: ["pending", "revision"] }
+        },
+        include: {
+            submitter: {
+                select: { id: true, username: true, email: true }
+            },
+            people: {
+                where: { role: "director" },
+                include: { person: true },
+                take: 1
+            }
+        },
+        orderBy: { createdAt: "desc" }
+    })
+
+    // Stats
+    const [pendingCount, approvedCount, rejectedCount] = await Promise.all([
+        prisma.movie.count({ where: { status: { in: ["pending", "revision"] } } }),
+        prisma.movie.count({ where: { status: "approved" } }),
+        prisma.movie.count({ where: { status: "rejected" } })
+    ])
+
     return (
         <>
-            <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold text-white">Manajemen Film</h1>
-                <button className="bg-primary text-black px-4 py-2 rounded-lg font-bold hover:bg-yellow-500 transition-colors">
-                    + Tambah Film
-                </button>
-            </div>
-
-            {/* Search and Filter Bar */}
-            <div className="bg-[#1a1a1a] p-4 rounded-xl border border-gray-800 mb-6 flex flex-col md:flex-row gap-4">
-                <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-2.5 text-gray-500" size={20} />
-                    <input
-                        type="text"
-                        placeholder="Cari berdasarkan judul, sutradara..."
-                        className="w-full bg-[#252525] border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-white focus:outline-none focus:border-primary"
-                    />
+            <div className="flex items-center gap-3 mb-8">
+                <div className="p-3 rounded-xl bg-primary/10 text-primary border border-primary/20">
+                    <Film size={22} />
                 </div>
-                <div className="flex gap-4">
-                    <div className="relative">
-                        <select className="bg-[#252525] border border-gray-700 rounded-lg pl-4 pr-10 py-2 text-white focus:outline-none focus:border-primary appearance-none cursor-pointer">
-                            <option value="">Semua Genre</option>
-                            <option value="action">Action</option>
-                            <option value="drama">Drama</option>
-                            <option value="scifi">Sci-Fi</option>
-                        </select>
-                        <Filter className="absolute right-3 top-2.5 text-gray-500 pointer-events-none" size={16} />
-                    </div>
-                    <div className="relative">
-                        <select className="bg-[#252525] border border-gray-700 rounded-lg pl-4 pr-10 py-2 text-white focus:outline-none focus:border-primary appearance-none cursor-pointer">
-                            <option value="">Semua Tahun</option>
-                            <option value="2024">2024</option>
-                            <option value="2023">2023</option>
-                            <option value="2022">2022</option>
-                        </select>
-                        <Filter className="absolute right-3 top-2.5 text-gray-500 pointer-events-none" size={16} />
-                    </div>
+                <div>
+                    <h1 className="text-3xl font-bold text-white">Moderasi Film</h1>
+                    <p className="text-gray-400 text-sm">Review dan setujui kiriman film dari pengguna.</p>
                 </div>
             </div>
 
-            {/* Data Table */}
-            <div className="bg-[#1a1a1a] rounded-xl border border-gray-800 overflow-hidden">
-                <table className="w-full text-left text-sm text-gray-400">
-                    <thead className="bg-[#252525] text-gray-200 uppercase font-bold">
-                        <tr>
-                            <th className="px-6 py-4">Judul</th>
-                            <th className="px-6 py-4">Tahun</th>
-                            <th className="px-6 py-4">Sutradara</th>
-                            <th className="px-6 py-4">Genre</th>
-                            <th className="px-6 py-4">Status</th>
-                            <th className="px-6 py-4 text-right">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-800">
-                        {/* Mock Row 1 */}
-                        <tr className="hover:bg-white/5 transition-colors">
-                            <td className="px-6 py-4 font-medium text-white">Inception</td>
-                            <td className="px-6 py-4">2010</td>
-                            <td className="px-6 py-4">Christopher Nolan</td>
-                            <td className="px-6 py-4">Sci-Fi</td>
-                            <td className="px-6 py-4"><span className="px-2 py-1 rounded-full bg-green-500/20 text-green-400 text-xs font-bold">Aktif</span></td>
-                            <td className="px-6 py-4 text-right">
-                                <div className="flex justify-end gap-2">
-                                    <button className="p-2 hover:bg-white/10 rounded-lg text-blue-400"><Eye size={18} /></button>
-                                    <button className="p-2 hover:bg-white/10 rounded-lg text-yellow-400"><Edit size={18} /></button>
-                                    <button className="p-2 hover:bg-white/10 rounded-lg text-red-400"><Trash2 size={18} /></button>
-                                </div>
-                            </td>
-                        </tr>
-                        {/* Mock Row 2 */}
-                        <tr className="hover:bg-white/5 transition-colors">
-                            <td className="px-6 py-4 font-medium text-white">The Dark Knight</td>
-                            <td className="px-6 py-4">2008</td>
-                            <td className="px-6 py-4">Christopher Nolan</td>
-                            <td className="px-6 py-4">Action</td>
-                            <td className="px-6 py-4"><span className="px-2 py-1 rounded-full bg-green-500/20 text-green-400 text-xs font-bold">Aktif</span></td>
-                            <td className="px-6 py-4 text-right">
-                                <div className="flex justify-end gap-2">
-                                    <button className="p-2 hover:bg-white/10 rounded-lg text-blue-400"><Eye size={18} /></button>
-                                    <button className="p-2 hover:bg-white/10 rounded-lg text-yellow-400"><Edit size={18} /></button>
-                                    <button className="p-2 hover:bg-white/10 rounded-lg text-red-400"><Trash2 size={18} /></button>
-                                </div>
-                            </td>
-                        </tr>
-                        {/* Mock Row 3 */}
-                        <tr className="hover:bg-white/5 transition-colors">
-                            <td className="px-6 py-4 font-medium text-white">Interstellar</td>
-                            <td className="px-6 py-4">2014</td>
-                            <td className="px-6 py-4">Christopher Nolan</td>
-                            <td className="px-6 py-4">Sci-Fi</td>
-                            <td className="px-6 py-4"><span className="px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-400 text-xs font-bold">Draft</span></td>
-                            <td className="px-6 py-4 text-right">
-                                <div className="flex justify-end gap-2">
-                                    <button className="p-2 hover:bg-white/10 rounded-lg text-blue-400"><Eye size={18} /></button>
-                                    <button className="p-2 hover:bg-white/10 rounded-lg text-yellow-400"><Edit size={18} /></button>
-                                    <button className="p-2 hover:bg-white/10 rounded-lg text-red-400"><Trash2 size={18} /></button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            {/* Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-6">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-3 rounded-lg bg-yellow-500/10 text-yellow-400">
+                            <Clock size={18} />
+                        </div>
+                        <div className="text-2xl font-bold text-white">{pendingCount}</div>
+                    </div>
+                    <div className="text-gray-400 text-sm">Menunggu Moderasi</div>
+                </div>
+
+                <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-6">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-3 rounded-lg bg-green-500/10 text-green-400">
+                            <CheckCircle size={18} />
+                        </div>
+                        <div className="text-2xl font-bold text-white">{approvedCount}</div>
+                    </div>
+                    <div className="text-gray-400 text-sm">Disetujui</div>
+                </div>
+
+                <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-6">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-3 rounded-lg bg-red-500/10 text-red-400">
+                            <XCircle size={18} />
+                        </div>
+                        <div className="text-2xl font-bold text-white">{rejectedCount}</div>
+                    </div>
+                    <div className="text-gray-400 text-sm">Ditolak</div>
+                </div>
             </div>
 
-            {/* Pagination (Mock) */}
-            <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
-                <div>Menampilkan 1-3 dari 12 film</div>
-                <div className="flex gap-2">
-                    <button className="px-3 py-1 rounded-lg bg-[#1a1a1a] border border-gray-800 hover:bg-white/5 disabled:opacity-50" disabled>Sebelumnya</button>
-                    <button className="px-3 py-1 rounded-lg bg-[#1a1a1a] border border-gray-800 hover:bg-white/5">Selanjutnya</button>
+            {/* Pending Submissions */}
+            <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl overflow-hidden">
+                <div className="p-6 border-b border-gray-800">
+                    <h2 className="text-lg font-bold text-white">Kiriman Menunggu Review</h2>
+                    <p className="text-gray-400 text-sm mt-1">Film yang perlu direview dan disetujui oleh admin.</p>
+                </div>
+
+                <div className="p-6">
+                    {pendingMovies.length === 0 ? (
+                        <div className="text-center py-12 text-gray-500">
+                            <Film className="mx-auto mb-4 opacity-50" size={48} />
+                            <p>Tidak ada kiriman film yang menunggu moderasi.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {pendingMovies.map((movie) => {
+                                const director = movie.people[0]?.person?.name || "Unknown"
+                                const submitter = movie.submitter?.username || movie.submitter?.email?.split("@")[0] || "Unknown"
+
+                                return (
+                                    <div key={movie.id} className="bg-[#121212] border border-gray-800 rounded-xl p-4 flex gap-4">
+                                        {/* Movie Image */}
+                                        <div className="w-20 h-28 bg-gray-800 rounded-lg flex-shrink-0 overflow-hidden relative">
+                                            <MovieImage movie={movie} />
+                                        </div>
+
+                                        {/* Movie Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-start justify-between gap-4 mb-2">
+                                                <div>
+                                                    <h3 className="font-bold text-white text-lg line-clamp-1">{movie.title}</h3>
+                                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                        <StatusBadge status={movie.status} />
+                                                        <span className="text-gray-500 text-xs">
+                                                            {movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "TBA"}
+                                                        </span>
+                                                        <span className="text-gray-600">•</span>
+                                                        <span className="text-gray-500 text-xs">oleh @{submitter}</span>
+                                                    </div>
+                                                </div>
+
+                                                <Link
+                                                    href={`/movie/${movie.slug}`}
+                                                    target="_blank"
+                                                    className="p-2 bg-gray-800 text-gray-400 rounded-lg hover:bg-gray-700 hover:text-white transition-colors flex-shrink-0"
+                                                    title="Preview Film"
+                                                >
+                                                    <Eye size={18} />
+                                                </Link>
+                                            </div>
+
+                                            <div className="text-gray-400 text-sm mb-3">
+                                                <span className="text-gray-500">Sutradara:</span> {director}
+                                            </div>
+
+                                            {movie.synopsis && (
+                                                <p className="text-gray-500 text-sm line-clamp-2 mb-3">
+                                                    {movie.synopsis}
+                                                </p>
+                                            )}
+
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-gray-600 text-xs">
+                                                    Dikirim {new Date(movie.createdAt).toLocaleDateString("id-ID", {
+                                                        day: "2-digit",
+                                                        month: "long",
+                                                        year: "numeric"
+                                                    })}
+                                                </span>
+
+                                                <MovieModerationActions
+                                                    movieId={movie.id}
+                                                    movieTitle={movie.title}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
                 </div>
             </div>
         </>

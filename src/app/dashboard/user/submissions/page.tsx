@@ -4,6 +4,29 @@ import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import Image from "next/image"
 
+// Helper component to display movie image with fallback
+function MovieImage({ movie }: { movie: { posterUrl: string | null, bannerUrl: string | null, title: string } }) {
+    // Priority: poster > banner > placeholder
+    if (movie.posterUrl) {
+        return <Image src={movie.posterUrl} alt={movie.title} fill className="object-cover" />
+    }
+    if (movie.bannerUrl) {
+        return <Image src={movie.bannerUrl} alt={movie.title} fill className="object-cover" />
+    }
+    // Generate placeholder based on movie title initials
+    const initials = movie.title
+        .split(' ')
+        .slice(0, 2)
+        .map(word => word.charAt(0).toUpperCase())
+        .join('')
+
+    return (
+        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900 text-gray-300 text-lg font-bold">
+            {initials || 'M'}
+        </div>
+    )
+}
+
 export default async function MySubmissions() {
     const session = await auth()
 
@@ -12,7 +35,7 @@ export default async function MySubmissions() {
         orderBy: { updatedAt: 'desc' }
     })
 
-    const pendingSubmissions = submissions.filter(m => m.status === 'pending' || m.status === 'rejected')
+    const pendingSubmissions = submissions.filter(m => m.status === 'pending' || m.status === 'rejected' || m.status === 'revision')
     const approvedSubmissions = submissions.filter(m => m.status === 'approved')
 
     const StatusBadge = ({ status }: { status: string }) => {
@@ -23,6 +46,8 @@ export default async function MySubmissions() {
                 return <span className="flex items-center gap-1 text-green-500 bg-green-500/10 px-2 py-1 rounded text-xs font-bold"><CheckCircle size={12} /> Disetujui</span>
             case 'rejected':
                 return <span className="flex items-center gap-1 text-red-500 bg-red-500/10 px-2 py-1 rounded text-xs font-bold"><XCircle size={12} /> Ditolak</span>
+            case 'revision':
+                return <span className="flex items-center gap-1 text-orange-500 bg-orange-500/10 px-2 py-1 rounded text-xs font-bold"><AlertCircle size={12} /> Perlu Revisi</span>
             default:
                 return null
         }
@@ -52,11 +77,7 @@ export default async function MySubmissions() {
                             {pendingSubmissions.map(movie => (
                                 <div key={movie.id} className="bg-[#1a1a1a] p-4 rounded-xl border border-gray-800 flex gap-4 items-center">
                                     <div className="w-16 h-24 bg-gray-800 rounded-lg flex-shrink-0 overflow-hidden relative">
-                                        {movie.posterUrl ? (
-                                            <Image src={movie.posterUrl} alt={movie.title} fill className="object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">No img</div>
-                                        )}
+                                        <MovieImage movie={movie} />
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex justify-between items-start">
@@ -93,11 +114,7 @@ export default async function MySubmissions() {
                             {approvedSubmissions.map(movie => (
                                 <div key={movie.id} className="bg-[#1a1a1a] p-4 rounded-xl border border-gray-800 flex gap-4 items-center opacity-75 hover:opacity-100 transition-opacity">
                                     <div className="w-16 h-24 bg-gray-800 rounded-lg flex-shrink-0 overflow-hidden relative">
-                                        {movie.posterUrl ? (
-                                            <Image src={movie.posterUrl} alt={movie.title} fill className="object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">No img</div>
-                                        )}
+                                        <MovieImage movie={movie} />
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex justify-between items-start">
