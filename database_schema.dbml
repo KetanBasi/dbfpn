@@ -61,6 +61,20 @@ Table verification_tokens { // [NEW] For Magic Link
   }
 }
 
+Table pending_registrations { // [NEW] For OTP Registration
+  id integer [primary key, increment]
+  email varchar [unique, not null]
+  otp varchar [not null]
+  callback_url varchar
+  expires_at timestamp [not null]
+  created_at timestamp [default: `now()`]
+
+  indexes {
+    email
+    expires_at
+  }
+}
+
 Table movies {
   id integer [primary key, increment]
   title varchar [not null]

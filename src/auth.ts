@@ -41,6 +41,88 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   session: { strategy: "jwt" },
   ...authConfig,
   debug: false,
+  callbacks: {
+    ...authConfig.callbacks,
+
+    // Override JWT callback to verify user still exists in database
+    async jwt({ token, user, trigger }) {
+      // On initial sign in, store user data in token
+      if (user) {
+        ; (token as any).id = Number((user as any).id)
+          ; (token as any).email = (user as any).email
+          ; (token as any).name = (user as any).name
+          ; (token as any).username = (user as any).username
+          ; (token as any).role = (user as any).role
+          ; (token as any).avatar_url = (user as any).avatar_url
+          ; (token as any).bio = (user as any).bio
+          ; (token as any).status = (user as any).status
+      }
+
+      // On session refresh or update, verify user still exists in database
+      // This prevents "ghost sessions" after database is wiped
+      if (trigger === "update" || (!user && token)) {
+        const userId = Number((token as any).id)
+        if (Number.isFinite(userId)) {
+          try {
+            const dbUser = await prisma.user.findUnique({
+              where: { id: userId },
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                username: true,
+                role: true,
+                avatarUrl: true,
+                bio: true,
+                status: true
+              }
+            })
+
+            if (!dbUser) {
+              // User no longer exists in database - invalidate session
+              console.warn(`[Auth] User ${userId} not found in database, invalidating session`)
+              return null as any // This will cause session to be invalid
+            }
+
+            // Update token with latest user data from database
+            ; (token as any).id = dbUser.id
+              ; (token as any).email = dbUser.email
+              ; (token as any).name = dbUser.name
+              ; (token as any).username = dbUser.username
+              ; (token as any).role = dbUser.role
+              ; (token as any).avatar_url = dbUser.avatarUrl
+              ; (token as any).bio = dbUser.bio
+              ; (token as any).status = dbUser.status
+          } catch (error) {
+            console.error("[Auth] Error verifying user in database:", error)
+            // On error, keep existing token (don't invalidate on transient DB errors)
+          }
+        }
+      }
+
+      return token
+    },
+
+    // Override session callback
+    async session({ session, token }) {
+      // If token is null (user was invalidated), return empty session
+      if (!token || !(token as any).id) {
+        return { ...session, user: undefined } as any
+      }
+
+      if (session.user && token) {
+        ; (session.user as any).id = Number((token as any).id)
+          ; (session.user as any).email = (token as any).email
+          ; (session.user as any).name = (token as any).name
+          ; (session.user as any).username = (token as any).username
+          ; (session.user as any).role = (token as any).role
+          ; (session.user as any).avatar_url = (token as any).avatar_url
+          ; (session.user as any).bio = (token as any).bio
+          ; (session.user as any).status = (token as any).status
+      }
+      return session
+    },
+  },
   providers: [
     Nodemailer({
       server: {

@@ -10,6 +10,10 @@ async function main() {
     // ============================================
     const adminEmails = [
         'admin@dbfpn.com',
+        'fatanaqilla90@gmail.com',
+        'enkadhe30@gmail.com',
+        'imranzulkarnaen46@gmail.com',
+        'farihinmuhamad@gmail.com',
         // Add more admin emails below:
         // 'youremail@example.com',
     ]
