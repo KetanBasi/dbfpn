@@ -3,7 +3,15 @@
 import { useState } from "react";
 import RatingModal from "@/components/RatingModal";
 
-export default function MoviePage({ movie }) {
+type Movie = {
+  id: number;
+};
+
+type MoviePageProps = {
+  movie: Movie;
+};
+
+export default function MoviePage({ movie }: MoviePageProps) {
   const [showRating, setShowRating] = useState(false);
 
   return (

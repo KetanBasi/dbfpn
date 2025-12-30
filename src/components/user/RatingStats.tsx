@@ -6,7 +6,7 @@ type Props = {
 }
 
 export default function RatingStats({ ratingStats, totalRatings }: Props) {
-  const levels = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+  const levels = [5, 4, 3, 2, 1]
 
   return (
     <div className="bg-[#1a1a1a] rounded-2xl border border-gray-800 p-6">
