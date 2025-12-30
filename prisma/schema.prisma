@@ -77,19 +77,6 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
-model PendingRegistration {
-  id          Int      @id @default(autoincrement())
-  email       String   @unique
-  otp         String
-  callbackUrl String?  @map("callback_url")
-  expiresAt   DateTime @map("expires_at")
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  @@map("pending_registrations")
-  @@index([email])
-  @@index([expiresAt])
-}
-
 model Movie {
   id          Int           @id @default(autoincrement())
   title       String
