@@ -11,6 +11,7 @@ interface MovieHeaderProps {
   title: string
   year: string
   rating: number
+  totalReviews?: number
   posterUrl?: string | null
   bannerUrl?: string | null
   trailerUrl?: string | null
@@ -107,6 +108,7 @@ export default function MovieHeader({
   title,
   year,
   rating: ratingFromServer,
+  totalReviews = 0,
   posterUrl,
   bannerUrl,
   trailerUrl,
@@ -153,11 +155,17 @@ export default function MovieHeader({
           </div>
 
           <div className="text-right">
-            <div className="text-xl font-bold text-white mb-1">Rating</div>
+            <div className="text-xs text-gray-500 mb-1">
+              {totalReviews > 0 ? `${totalReviews} reviews` : "Belum ada rating"}
+            </div>
 
-            <div
-              className="flex items-center gap-1 text-primary cursor-pointer"
+            {/* Interactive Star Rating Button */}
+            <button
+              type="button"
+              onClick={() => setIsReviewModalOpen(true)}
               onMouseLeave={() => setHoverRating(0)}
+              className="group relative flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1a1a1a] border border-gray-700 hover:border-primary hover:bg-[#252525] transition-all cursor-pointer"
+              title="Klik untuk memberi rating"
             >
               {[...Array(5)].map((_, i) => {
                 const starValue = i + 1
@@ -165,17 +173,26 @@ export default function MovieHeader({
                 return (
                   <Star
                     key={i}
-                    size={20}
+                    size={22}
                     fill={isFilled ? "currentColor" : "none"}
-                    className={isFilled ? "text-primary" : "text-gray-600"}
+                    className={`transition-all duration-150 ${isFilled
+                        ? "text-primary drop-shadow-[0_0_4px_rgba(255,235,59,0.5)]"
+                        : "text-gray-600 group-hover:text-gray-400"
+                      } group-hover:scale-110`}
                     onMouseEnter={() => setHoverRating(starValue)}
-                    onClick={() => setIsReviewModalOpen(true)}
                   />
                 )
               })}
-            </div>
 
-            <span className="text-sm text-gray-400">{safeRating.toFixed(1)}/5</span>
+              <span className="ml-1.5 text-lg font-bold text-white group-hover:text-primary transition-colors">
+                {safeRating > 0 ? safeRating.toFixed(1) : "—"}
+              </span>
+            </button>
+
+            {/* Hint below the button */}
+            <div className="text-[10px] text-gray-500 mt-1">
+              Klik untuk beri rating
+            </div>
 
             <ReviewModal
               isOpen={isReviewModalOpen}
@@ -189,15 +206,13 @@ export default function MovieHeader({
 
         {!hasNoMedia ? (
           <div
-            className={`flex flex-col md:flex-row gap-8 ${
-              isSingleMedia ? "justify-center" : ""
-            } h-auto md:h-[500px]`}
+            className={`flex flex-col md:flex-row gap-8 ${isSingleMedia ? "justify-center" : ""
+              } h-auto md:h-[500px]`}
           >
             {hasPoster && (
               <div
-                className={`relative w-full md:w-auto md:aspect-[2/3] h-[500px] md:h-full rounded-lg overflow-hidden shadow-2xl border-4 border-white/10 shrink-0 ${
-                  isSingleMedia ? "mx-auto" : ""
-                }`}
+                className={`relative w-full md:w-auto md:aspect-[2/3] h-[500px] md:h-full rounded-lg overflow-hidden shadow-2xl border-4 border-white/10 shrink-0 ${isSingleMedia ? "mx-auto" : ""
+                  }`}
               >
                 <Image src={posterUrl!} alt={title} fill className="object-cover" />
               </div>
@@ -205,9 +220,8 @@ export default function MovieHeader({
 
             {hasBanner && (
               <div
-                className={`relative w-full ${
-                  isSingleMedia ? "md:w-[800px]" : "md:flex-1"
-                } h-[300px] md:h-full rounded-lg overflow-hidden bg-black border border-gray-800`}
+                className={`relative w-full ${isSingleMedia ? "md:w-[800px]" : "md:flex-1"
+                  } h-[300px] md:h-full rounded-lg overflow-hidden bg-black border border-gray-800`}
               >
                 {isPlayingTrailer && trailerId ? (
                   <iframe

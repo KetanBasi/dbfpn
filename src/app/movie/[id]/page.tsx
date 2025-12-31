@@ -1,6 +1,5 @@
 import MovieHeader from "@/components/movie/MovieHeader"
 import CommentsSection from "@/components/movie/CommentsSection"
-import RatingClient from "@/components/movie/RatingClient"
 import prisma from "@/lib/prisma"
 import { notFound } from "next/navigation"
 
@@ -63,6 +62,7 @@ export default async function MovieDetail({
         title={movie.title}
         year={movie.releaseDate ? new Date(movie.releaseDate).getFullYear().toString() : "TBA"}
         rating={Number(averageRating.toFixed(1))}
+        totalReviews={movie.reviews.length}
         posterUrl={movie.posterUrl}
         bannerUrl={movie.bannerUrl}
         trailerUrl={movie.trailerUrl}
@@ -90,7 +90,6 @@ export default async function MovieDetail({
       />
 
       <div className="max-w-7xl mx-auto px-4">
-        <RatingClient movieId={movieId} />
         <CommentsSection />
       </div>
     </div>
