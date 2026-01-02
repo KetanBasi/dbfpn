@@ -2,12 +2,22 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, User, Film, ShieldAlert, Settings, LogOut, Upload } from "lucide-react"
+import {
+    LayoutDashboard, User, Film, ShieldAlert, Settings, LogOut, Upload,
+    ChevronDown, MessageSquare, Users, FolderCog
+} from "lucide-react"
 import { useSession, signOut } from "next-auth/react"
+import { useState } from "react"
 
 interface DashboardLayoutProps {
     children: React.ReactNode
-    user?: any // Optional user data from server
+    user?: any
+}
+
+interface MenuGroup {
+    label: string
+    icon: any
+    items: { href: string; label: string; icon: any }[]
 }
 
 export default function DashboardLayout({ children, user }: DashboardLayoutProps) {
@@ -15,8 +25,15 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
     const { data: session } = useSession()
     const role = user?.role || session?.user?.role || "user"
 
-    // Console log the session data
-    console.log(`Session Data: ${JSON.stringify(session)}`)
+    // Collapsible state for menu groups
+    const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
+        moderasi: true,
+        manajemen: false,
+    })
+
+    const toggleGroup = (group: string) => {
+        setExpandedGroups(prev => ({ ...prev, [group]: !prev[group] }))
+    }
 
     const userLinks = [
         { href: "/dashboard/user", label: "Ringkasan", icon: LayoutDashboard },
@@ -25,26 +42,98 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
         { href: "/dashboard/user/settings", label: "Pengaturan", icon: Settings },
     ]
 
-    const adminLinks = [
+    // Admin has groups instead of flat links
+    const adminTopLinks = [
         { href: "/dashboard/admin", label: "Ringkasan", icon: LayoutDashboard },
-        { href: "/dashboard/admin/movies", label: "Film", icon: Film },
-        { href: "/dashboard/admin/users", label: "Pengguna", icon: User },
-        { href: "/dashboard/admin/moderation", label: "Moderasi", icon: ShieldAlert },
+    ]
+
+    const adminGroups: MenuGroup[] = [
+        {
+            label: "Moderasi",
+            icon: ShieldAlert,
+            items: [
+                { href: "/dashboard/admin/moderation/movies", label: "Moderasi Film", icon: Film },
+                { href: "/dashboard/admin/moderation/users", label: "Moderasi User", icon: Users },
+                { href: "/dashboard/admin/moderation/comments", label: "Moderasi Komentar", icon: MessageSquare },
+            ]
+        },
+        {
+            label: "Manajemen",
+            icon: FolderCog,
+            items: [
+                { href: "/dashboard/admin/manage/movies", label: "Kelola Film", icon: Film },
+                { href: "/dashboard/admin/manage/users", label: "Kelola User", icon: Users },
+            ]
+        }
+    ]
+
+    const adminBottomLinks = [
         { href: "/dashboard/admin/settings", label: "Pengaturan", icon: Settings },
     ]
 
     const isAdminPage = pathname.startsWith("/dashboard/admin")
     const isUserPage = pathname.startsWith("/dashboard/user") || pathname.startsWith("/dashboard/submission")
 
-    // Decide links based on URL path, not just role
-    const links = isAdminPage ? adminLinks : userLinks
+    const isLinkActive = (href: string) => pathname === href
+
+    const renderLink = (link: { href: string; label: string; icon: any }, indent = false) => {
+        const Icon = link.icon
+        const isActive = isLinkActive(link.href)
+        return (
+            <Link
+                key={link.href}
+                href={link.href}
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${indent ? "ml-4" : ""
+                    } ${isActive
+                        ? "bg-primary text-black"
+                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                    }`}
+            >
+                <Icon size={16} />
+                {link.label}
+            </Link>
+        )
+    }
+
+    const renderGroup = (group: MenuGroup, key: string) => {
+        const isExpanded = expandedGroups[key]
+        const hasActiveChild = group.items.some(item => isLinkActive(item.href))
+        const Icon = group.icon
+
+        return (
+            <div key={key} className="space-y-1">
+                <button
+                    type="button"
+                    onClick={() => toggleGroup(key)}
+                    className={`flex items-center justify-between w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${hasActiveChild
+                            ? "text-primary bg-primary/10"
+                            : "text-gray-400 hover:text-white hover:bg-white/5"
+                        }`}
+                >
+                    <span className="flex items-center gap-3">
+                        <Icon size={16} />
+                        {group.label}
+                    </span>
+                    <ChevronDown
+                        size={14}
+                        className={`transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                    />
+                </button>
+
+                {isExpanded && (
+                    <div className="space-y-1 mt-1">
+                        {group.items.map(item => renderLink(item, true))}
+                    </div>
+                )}
+            </div>
+        )
+    }
 
     return (
         <div className="flex min-h-screen bg-[#050505]">
             {/* Sidebar */}
             <aside className="w-64 bg-[#121212] border-r border-gray-800 flex flex-col fixed h-full">
                 <div className="p-6 border-b border-gray-800">
-
                     <div className="mt-4">
                         <div className="text-white font-bold truncate">
                             {user?.name || (session?.user as any)?.name || "User"}
@@ -59,7 +148,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                 </div>
 
                 <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-                    {/* Submit Button - Visible to all users */}
+                    {/* Submit Button */}
                     <div className="mb-6">
                         <Link
                             href="/dashboard/submission"
@@ -70,23 +159,27 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                         </Link>
                     </div>
 
-                    {links.map((link) => {
-                        const Icon = link.icon
-                        const isActive = pathname === link.href
-                        return (
-                            <Link
-                                key={link.href}
-                                href={link.href}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${isActive
-                                    ? "bg-primary text-black"
-                                    : "text-gray-400 hover:text-white hover:bg-white/5"
-                                    }`}
-                            >
-                                <Icon size={18} />
-                                {link.label}
-                            </Link>
-                        )
-                    })}
+                    {isAdminPage ? (
+                        <>
+                            {/* Admin Top Links */}
+                            {adminTopLinks.map(link => renderLink(link))}
+
+                            {/* Admin Groups */}
+                            <div className="space-y-2 mt-4">
+                                {adminGroups.map((group, idx) =>
+                                    renderGroup(group, idx === 0 ? "moderasi" : "manajemen")
+                                )}
+                            </div>
+
+                            {/* Admin Bottom Links */}
+                            <div className="mt-4 pt-4 border-t border-gray-800">
+                                {adminBottomLinks.map(link => renderLink(link))}
+                            </div>
+                        </>
+                    ) : (
+                        /* User Links */
+                        userLinks.map(link => renderLink(link))
+                    )}
 
                     {/* Role Switch for Admins */}
                     {role === "admin" && (
@@ -96,11 +189,10 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                                 className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
                             >
                                 <User size={18} />
-                                {isAdminPage ? "Beralih ke Dasbor Pengguna" : "Beralih ke Dasbor Admin"}
+                                {isAdminPage ? "Beralih ke Dasbor User" : "Beralih ke Dasbor Admin"}
                             </Link>
                         </div>
                     )}
-                    {/* Note: User switching to Admin is removed as it should be role-based, but kept logic if needed for testing */}
                 </nav>
 
                 <div className="p-4 border-t border-gray-800">
