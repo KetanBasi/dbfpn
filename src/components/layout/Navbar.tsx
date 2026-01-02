@@ -121,7 +121,7 @@ export default function Navbar() {
               Keluar
             </button>
           ) : (
-            <Link href="/api/auth/signin" className="hover:text-white transition-colors">
+            <Link href="/signin" className="hover:text-white transition-colors">
               Masuk
             </Link>
           )}
