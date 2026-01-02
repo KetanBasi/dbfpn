@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { Search, ChevronDown, User, Film, Settings, LogOut, Plus } from "lucide-react"
+import { Search, ChevronDown, User, Film, Settings, LogOut, Plus, LayoutDashboard, Shield } from "lucide-react"
 import { useState, useRef, useEffect, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
@@ -49,6 +49,7 @@ export default function Navbar() {
   const username = user?.username
   const avatarUrl = user?.avatar_url
   const displayName = user?.name || username || "User"
+  const userRole = user?.role
 
   return (
     <nav className="bg-[#121212] text-white py-3 px-4 md:px-8 flex items-center justify-between sticky top-0 z-50 border-b border-gray-800">
@@ -167,6 +168,29 @@ export default function Navbar() {
                       </Link>
                     )}
 
+                    <Link
+                      href="/dashboard/user"
+                      onClick={() => setIsProfileDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#252525] hover:text-white transition-colors"
+                    >
+                      <LayoutDashboard size={16} />
+                      Dashboard
+                    </Link>
+
+                    {userRole === "admin" && (
+                      <Link
+                        href="/dashboard/admin"
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-primary hover:bg-primary/10 transition-colors"
+                      >
+                        <Shield size={16} />
+                        Admin Dashboard
+                      </Link>
+                    )}
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="border-t border-gray-700 py-1">
                     <Link
                       href="/dashboard/submission"
                       onClick={() => setIsProfileDropdownOpen(false)}
