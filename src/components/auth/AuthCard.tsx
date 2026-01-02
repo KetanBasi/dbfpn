@@ -13,14 +13,21 @@ export default function AuthCard() {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
     const [callbackUrl, setCallbackUrl] = useState<string | undefined>(undefined)
+    const [accountError, setAccountError] = useState<string | null>(null)
     const { showToast } = useToast()
 
-    // Get callback URL from query params on mount
+    // Get callback URL and error from query params on mount
     useEffect(() => {
         const params = new URLSearchParams(window.location.search)
         const callback = params.get("callbackUrl")
+        const errorParam = params.get("error")
+
         if (callback) {
             setCallbackUrl(callback)
+        }
+
+        if (errorParam === "AccountDisabled") {
+            setAccountError("Akun Anda telah dinonaktifkan. Hubungi admin untuk informasi lebih lanjut.")
         }
     }, [])
 
@@ -77,6 +84,12 @@ export default function AuthCard() {
 
             {authState === "landing" && (
                 <div className="text-center space-y-6">
+                    {accountError && (
+                        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm mb-4">
+                            {accountError}
+                        </div>
+                    )}
+
                     <h2 className="text-2xl font-bold text-white">Selamat Datang</h2>
                     <p className="text-gray-400 text-sm">
                         Masuk atau daftar dengan email

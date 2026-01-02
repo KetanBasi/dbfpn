@@ -84,6 +84,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               return null as any // This will cause session to be invalid
             }
 
+            // Check if user is banned or inactive - invalidate session
+            if (dbUser.status === "banned" || dbUser.status === "inactive") {
+              console.warn(`[Auth] User ${userId} is ${dbUser.status}, invalidating session`)
+              return null as any // Force logout for banned/inactive users
+            }
+
             // Update token with latest user data from database
             ; (token as any).id = dbUser.id
               ; (token as any).email = dbUser.email

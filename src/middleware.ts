@@ -22,10 +22,20 @@ export default auth(async function middleware(request: NextRequest) {
         return NextResponse.next()
     }
 
-    // If user is logged in but has no username, redirect to complete profile
+    // If user is logged in, check their status and profile completion
     if (session?.user) {
+        const userStatus = (session.user as any).status
         const username = (session.user as any).username
 
+        // Check if user is banned or inactive - redirect to signin with message
+        if (userStatus === "banned" || userStatus === "inactive") {
+            // Clear session by redirecting to signout then signin
+            const signOutUrl = new URL("/api/auth/signout", request.url)
+            signOutUrl.searchParams.set("callbackUrl", "/signin?error=AccountDisabled")
+            return NextResponse.redirect(signOutUrl)
+        }
+
+        // If user has no username, redirect to complete profile
         if (!username && path !== "/complete-profile") {
             const url = new URL("/complete-profile", request.url)
             url.searchParams.set("callbackUrl", path)
