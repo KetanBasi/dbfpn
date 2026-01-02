@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { Search, ChevronDown } from "lucide-react"
+import Image from "next/image"
+import { Search, ChevronDown, User, Film, Settings, LogOut, Plus } from "lucide-react"
 import { useState, useRef, useEffect, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
@@ -10,14 +11,20 @@ export default function Navbar() {
   const { data: session, status } = useSession()
 
   const [searchType, setSearchType] = useState("Semua")
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false)
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false)
+  const searchDropdownRef = useRef<HTMLDivElement>(null)
+  const profileDropdownRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false)
+      if (searchDropdownRef.current && !searchDropdownRef.current.contains(event.target as Node)) {
+        setIsSearchDropdownOpen(false)
+      }
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setIsProfileDropdownOpen(false)
       }
     }
     document.addEventListener("mousedown", handleClickOutside)
@@ -38,6 +45,10 @@ export default function Navbar() {
   const searchOptions = ["Semua", "Film", "Sutradara", "Aktor"]
 
   const isLoggedIn = !!session?.user
+  const user = session?.user as any
+  const username = user?.username
+  const avatarUrl = user?.avatar_url
+  const displayName = user?.name || username || "User"
 
   return (
     <nav className="bg-[#121212] text-white py-3 px-4 md:px-8 flex items-center justify-between sticky top-0 z-50 border-b border-gray-800">
@@ -53,16 +64,16 @@ export default function Navbar() {
         {/* Search Bar */}
         <div className="flex-1 flex items-center mx-4">
           <div className="relative flex items-center w-full">
-            <div className="relative" ref={dropdownRef}>
+            <div className="relative" ref={searchDropdownRef}>
               <button
                 type="button"
-                onClick={() => setIsDropdownOpen((v) => !v)}
+                onClick={() => setIsSearchDropdownOpen((v) => !v)}
                 className="h-8 bg-white text-black px-3 rounded-l-sm text-sm font-medium flex items-center gap-1 hover:bg-gray-200 transition-colors shrink-0 border-r border-gray-300"
               >
                 {searchType} <ChevronDown size={14} />
               </button>
 
-              {isDropdownOpen && (
+              {isSearchDropdownOpen && (
                 <div className="absolute top-full left-0 mt-1 w-32 bg-white text-black rounded-md shadow-lg py-1 z-50">
                   {searchOptions.map((option) => (
                     <button
@@ -70,7 +81,7 @@ export default function Navbar() {
                       type="button"
                       onClick={() => {
                         setSearchType(option)
-                        setIsDropdownOpen(false)
+                        setIsSearchDropdownOpen(false)
                       }}
                       className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
                     >
@@ -106,22 +117,106 @@ export default function Navbar() {
           <Link href="/top-100" className="hover:text-white transition-colors">
             Top 100
           </Link>
-          <Link href="/dashboard/user" className="hover:text-white transition-colors">
-            Dasbor
-          </Link>
 
           {status === "loading" ? (
-            <span className="text-gray-500">...</span>
+            <div className="w-8 h-8 rounded-full bg-gray-700 animate-pulse" />
           ) : isLoggedIn ? (
-            <button
-              type="button"
-              onClick={() => signOut({ callbackUrl: "/" })}
-              className="hover:text-white transition-colors"
-            >
-              Keluar
-            </button>
+            /* Profile Dropdown */
+            <div className="relative" ref={profileDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsProfileDropdownOpen((v) => !v)}
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              >
+                {avatarUrl ? (
+                  <Image
+                    src={avatarUrl}
+                    alt={displayName}
+                    width={32}
+                    height={32}
+                    className="w-8 h-8 rounded-full object-cover border-2 border-primary/50"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-primary/20 border-2 border-primary/50 flex items-center justify-center">
+                    <User size={16} className="text-primary" />
+                  </div>
+                )}
+                <ChevronDown size={14} className={`text-gray-400 transition-transform ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isProfileDropdownOpen && (
+                <div className="absolute top-full right-0 mt-2 w-56 bg-[#1a1a1a] border border-gray-700 rounded-xl shadow-xl overflow-hidden z-50">
+                  {/* User Info Header */}
+                  <div className="px-4 py-3 border-b border-gray-700 bg-[#252525]">
+                    <p className="font-medium text-white truncate">{displayName}</p>
+                    {username && (
+                      <p className="text-xs text-gray-400 truncate">@{username}</p>
+                    )}
+                  </div>
+
+                  {/* Menu Items */}
+                  <div className="py-1">
+                    {username && (
+                      <Link
+                        href={`/user/${username}`}
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#252525] hover:text-white transition-colors"
+                      >
+                        <User size={16} />
+                        Profil Saya
+                      </Link>
+                    )}
+
+                    <Link
+                      href="/dashboard/submission"
+                      onClick={() => setIsProfileDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#252525] hover:text-white transition-colors"
+                    >
+                      <Plus size={16} />
+                      Submit Film Baru
+                    </Link>
+
+                    <Link
+                      href="/dashboard/user/submissions"
+                      onClick={() => setIsProfileDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#252525] hover:text-white transition-colors"
+                    >
+                      <Film size={16} />
+                      Film Saya
+                    </Link>
+
+                    <Link
+                      href="/dashboard/user/settings"
+                      onClick={() => setIsProfileDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#252525] hover:text-white transition-colors"
+                    >
+                      <Settings size={16} />
+                      Pengaturan
+                    </Link>
+                  </div>
+
+                  {/* Logout */}
+                  <div className="border-t border-gray-700 py-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsProfileDropdownOpen(false)
+                        signOut({ callbackUrl: "/" })
+                      }}
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
+                    >
+                      <LogOut size={16} />
+                      Keluar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           ) : (
-            <Link href="/signin" className="hover:text-white transition-colors">
+            <Link
+              href="/signin"
+              className="bg-primary text-black font-medium px-4 py-1.5 rounded-full hover:bg-yellow-400 transition-colors"
+            >
               Masuk
             </Link>
           )}
