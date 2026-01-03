@@ -67,6 +67,7 @@ export default async function UpgradePage() {
                         </li>
                         <li className="flex items-center gap-2 text-sm text-gray-300">
                             <Check size={16} className="text-green-500" /> Simpan watchlist
+                            <span className="text-xs text-gray-500">(segera)</span>
                         </li>
                         <li className="flex items-center gap-2 text-sm text-gray-500">
                             <X size={16} className="text-gray-600" /> Kirim film baru

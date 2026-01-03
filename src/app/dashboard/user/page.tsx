@@ -1,4 +1,4 @@
-import { Clock, Star, Film } from "lucide-react"
+import { Clock, Star, Film, BadgeCheck, ShieldCheck } from "lucide-react"
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import Link from "next/link"
@@ -18,7 +18,7 @@ export default async function UserDashboard() {
       prisma.movie.count({ where: { submitterId: userId } }),
       prisma.user.findUnique({
         where: { id: userId },
-        select: { createdAt: true, username: true, name: true },
+        select: { createdAt: true, username: true, name: true, isVerified: true, role: true },
       }),
     ])
 
@@ -54,10 +54,25 @@ export default async function UserDashboard() {
               @{dbUser?.username || user.email?.split("@")[0]} • Anggota sejak{" "}
               {joinDate}
             </p>
-            <div className="flex gap-2 mt-3">
-              <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-bold border border-primary/20">
-                Anggota {(user as any).role === "admin" ? "Admin" : "Gratis"}
-              </span>
+            <div className="flex gap-2 mt-3 flex-wrap">
+              {/* Verified Badge */}
+              {(dbUser?.isVerified || dbUser?.role === "admin") && (
+                <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold border border-blue-500/20">
+                  <BadgeCheck size={12} /> Verified
+                </span>
+              )}
+              {/* Admin Badge */}
+              {dbUser?.role === "admin" && (
+                <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10 text-green-400 text-xs font-bold border border-green-500/20">
+                  <ShieldCheck size={12} /> Admin
+                </span>
+              )}
+              {/* Membership tier */}
+              {!dbUser?.isVerified && dbUser?.role !== "admin" && (
+                <span className="px-3 py-1 rounded-full bg-gray-700/50 text-gray-400 text-xs font-bold border border-gray-700">
+                  Anggota Gratis
+                </span>
+              )}
             </div>
           </div>
         </div>
