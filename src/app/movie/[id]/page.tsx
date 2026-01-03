@@ -1,5 +1,5 @@
 import MovieHeader from "@/components/movie/MovieHeader"
-import CommentsSection from "@/components/movie/CommentsSection"
+import ReviewsCommentsSection from "@/components/movie/ReviewsCommentsSection"
 import prisma from "@/lib/prisma"
 import { notFound } from "next/navigation"
 
@@ -90,7 +90,7 @@ export default async function MovieDetail({
       />
 
       <div className="max-w-7xl mx-auto px-4">
-        <CommentsSection movieId={movieId} movieSlug={movie.slug} />
+        <ReviewsCommentsSection movieId={movieId} movieSlug={movie.slug} />
       </div>
     </div>
   )

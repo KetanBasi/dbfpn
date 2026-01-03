@@ -74,8 +74,10 @@ export async function GET(request: NextRequest) {
 
         return {
             id: comment.id,
-            content: comment.content,
+            content: comment.deletedAt ? "[Komentar ini telah dihapus]" : comment.content,
             createdAt: comment.createdAt,
+            deletedAt: comment.deletedAt,
+            isOwner: currentUserId === comment.user.id,
             user: {
                 id: comment.user.id,
                 username: comment.user.username,
@@ -159,6 +161,8 @@ export async function POST(request: NextRequest) {
             id: comment.id,
             content: comment.content,
             createdAt: comment.createdAt,
+            deletedAt: null,
+            isOwner: true,
             user: {
                 id: comment.user.id,
                 username: comment.user.username,
@@ -172,4 +176,43 @@ export async function POST(request: NextRequest) {
             replies: []
         }
     })
+}
+
+// DELETE /api/comments - Soft delete a comment
+export async function DELETE(request: NextRequest) {
+    const session = await auth()
+
+    if (!session?.user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const userId = Number((session.user as any).id)
+    const userRole = (session.user as any).role
+    const body = await request.json()
+    const { commentId } = body
+
+    if (!commentId) {
+        return NextResponse.json({ error: "commentId is required" }, { status: 400 })
+    }
+
+    const comment = await prisma.comment.findUnique({
+        where: { id: Number(commentId) }
+    })
+
+    if (!comment) {
+        return NextResponse.json({ error: "Comment not found" }, { status: 404 })
+    }
+
+    // Only owner or admin can delete
+    if (comment.userId !== userId && userRole !== "admin") {
+        return NextResponse.json({ error: "Not authorized to delete this comment" }, { status: 403 })
+    }
+
+    // Soft delete - set deletedAt timestamp
+    await prisma.comment.update({
+        where: { id: Number(commentId) },
+        data: { deletedAt: new Date() }
+    })
+
+    return NextResponse.json({ success: true })
 }
