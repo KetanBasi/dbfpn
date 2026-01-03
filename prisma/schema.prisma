@@ -22,6 +22,7 @@ model User {
   accounts      Account[]
   auditLogs     AuditLog[]
   comments      Comment[]
+  commentVotes  CommentVote[]
   movies        Movie[]
   notifications Notification[]
   people        Person[]
@@ -193,23 +194,37 @@ model Review {
 }
 
 model Comment {
-  id        Int       @id @default(autoincrement())
-  userId    Int       @map("user_id")
-  movieId   Int       @map("movie_id")
+  id        Int           @id @default(autoincrement())
+  userId    Int           @map("user_id")
+  movieId   Int           @map("movie_id")
   content   String
-  parentId  Int?      @map("parent_id")
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime? @updatedAt @map("updated_at")
-  movie     Movie     @relation(fields: [movieId], references: [id])
-  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
-  replies   Comment[] @relation("CommentReplies")
-  user      User      @relation(fields: [userId], references: [id])
+  parentId  Int?          @map("parent_id")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime?     @updatedAt @map("updated_at")
+  movie     Movie         @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  parent    Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[]     @relation("CommentReplies")
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  votes     CommentVote[]
 
   @@index([movieId])
   @@index([userId])
   @@index([parentId])
   @@index([createdAt])
   @@map("comments")
+}
+
+model CommentVote {
+  userId    Int      @map("user_id")
+  commentId Int      @map("comment_id")
+  isDislike Boolean  @default(false) @map("is_dislike")
+  createdAt DateTime @default(now()) @map("created_at")
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, commentId])
+  @@index([commentId])
+  @@map("comment_votes")
 }
 
 model Watchlist {

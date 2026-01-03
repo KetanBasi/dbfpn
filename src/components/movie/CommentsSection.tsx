@@ -2,62 +2,31 @@
 
 import { MessageSquare, ThumbsUp, MoreHorizontal, Smile, BadgeCheck, ShieldCheck, Flag, Link as LinkIcon, Send } from "lucide-react"
 import Link from "next/link"
-import { useState, useRef, useEffect } from "react"
-
-// Mock Data
-const INITIAL_COMMENTS = [
-    {
-        id: 1,
-        user: "Pengguna Lain #1",
-        avatar: null,
-        date: "2025-12-12T10:00:00",
-        content: "Dag dig dug serrr.....",
-        likes: 12,
-        dislikes: 0,
-        isVerified: true,
-        isAdmin: true,
-        replies: []
-    },
-    {
-        id: 2,
-        user: "Pengguna Lain #2",
-        avatar: null,
-        date: "2025-12-12T11:30:00",
-        content: "Hidup penuh masalah? Skill issue...",
-        likes: 5,
-        dislikes: 2,
-        isVerified: true,
-        isAdmin: false,
-        replies: []
-    },
-    {
-        id: 3,
-        user: "Pengguna Lain #3",
-        avatar: null,
-        date: "2025-12-12T12:15:00",
-        content: "Bajigur plot twist nya",
-        likes: 8,
-        dislikes: 1,
-        isVerified: false,
-        isAdmin: false,
-        replies: [
-            {
-                id: 31,
-                user: "Balasan User",
-                avatar: null,
-                date: "2025-12-12T12:20:00",
-                content: "Setuju banget bang!",
-                likes: 2,
-                dislikes: 0,
-                isVerified: false,
-                isAdmin: false,
-                replies: []
-            }
-        ]
-    }
-]
+import Image from "next/image"
+import { useState, useRef, useEffect, useCallback } from "react"
+import { useSession } from "next-auth/react"
+import { useToast } from "@/components/ui/Toast"
 
 const EMOJIS = ["😀", "😂", "😍", "🔥", "👍", "👎", "😭", "😱", "🤔", "💩"]
+
+interface CommentUser {
+    id: number
+    username: string | null
+    name: string | null
+    avatarUrl: string | null
+    isAdmin: boolean
+}
+
+interface CommentData {
+    id: number
+    content: string
+    createdAt: string
+    user: CommentUser
+    likes: number
+    dislikes: number
+    userVote: "like" | "dislike" | null
+    replies: CommentData[]
+}
 
 // Reusable Input Component
 function CommentInput({
@@ -66,6 +35,7 @@ function CommentInput({
     onSubmit,
     placeholder,
     isLoggedIn,
+    isLoading,
     autoFocus = false
 }: {
     value: string
@@ -73,6 +43,7 @@ function CommentInput({
     onSubmit: () => void
     placeholder: string
     isLoggedIn: boolean
+    isLoading?: boolean
     autoFocus?: boolean
 }) {
     const [showEmojiPicker, setShowEmojiPicker] = useState(false)
@@ -93,9 +64,16 @@ function CommentInput({
         setShowEmojiPicker(false)
     }
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === "Enter" && !e.shiftKey && value.trim()) {
+            e.preventDefault()
+            onSubmit()
+        }
+    }
+
     return (
         <div className="flex gap-4">
-            <div className="w-10 h-10 rounded-full bg-gray-700 flex-shrink-0 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-gray-700 flex-shrink-0 flex items-center justify-center overflow-hidden">
                 <span className="text-white font-bold">U</span>
             </div>
             <div className="flex-1">
@@ -105,8 +83,9 @@ function CommentInput({
                             type="text"
                             value={value}
                             onChange={(e) => onChange(e.target.value)}
+                            onKeyDown={handleKeyDown}
                             placeholder={placeholder}
-                            disabled={!isLoggedIn}
+                            disabled={!isLoggedIn || isLoading}
                             autoFocus={autoFocus}
                             className="w-full bg-[#252525] text-white p-3 rounded-lg pr-10 focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                         />
@@ -131,10 +110,10 @@ function CommentInput({
                     </div>
                     <button
                         onClick={onSubmit}
-                        disabled={!isLoggedIn || !value.trim()}
+                        disabled={!isLoggedIn || !value.trim() || isLoading}
                         className="px-4 py-2 bg-primary text-black rounded-lg font-bold hover:bg-yellow-500 disabled:opacity-50 disabled:bg-gray-600 disabled:text-gray-400 transition-colors flex items-center gap-2"
                     >
-                        <Send size={16} /> Kirim
+                        <Send size={16} /> {isLoading ? "..." : "Kirim"}
                     </button>
                 </div>
             </div>
@@ -145,21 +124,26 @@ function CommentInput({
 // Comment Item Component
 function CommentItem({
     comment,
+    movieSlug,
     isLoggedIn,
     replyingTo,
     setReplyingTo,
-    handleLike,
-    handleCopyLink
+    onVote,
+    onReply,
+    onCopyLink
 }: {
-    comment: any
+    comment: CommentData
+    movieSlug: string
     isLoggedIn: boolean
     replyingTo: number | null
     setReplyingTo: (id: number | null) => void
-    handleLike: (id: number, isDislike: boolean) => void
-    handleCopyLink: (id: number) => void
+    onVote: (commentId: number, isDislike: boolean) => void
+    onReply: (parentId: number, content: string) => Promise<void>
+    onCopyLink: (commentId: number) => void
 }) {
     const [showOptions, setShowOptions] = useState(false)
     const [replyContent, setReplyContent] = useState("")
+    const [isSubmitting, setIsSubmitting] = useState(false)
     const optionsRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -172,42 +156,65 @@ function CommentItem({
         return () => document.removeEventListener("mousedown", handleClickOutside)
     }, [])
 
+    const displayName = comment.user.name || comment.user.username || `User#${comment.user.id}`
+    const initial = displayName.charAt(0).toUpperCase()
+
+    const handleSubmitReply = async () => {
+        if (!replyContent.trim()) return
+        setIsSubmitting(true)
+        try {
+            await onReply(comment.id, replyContent)
+            setReplyContent("")
+            setReplyingTo(null)
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
     return (
-        <div id={`comment-${comment.id}`}>
+        <div id={`comment-${comment.id}`} className="scroll-mt-24">
             <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-full bg-gray-700 flex-shrink-0 overflow-hidden">
-                    {/* Placeholder avatar */}
+                <div className="w-10 h-10 rounded-full bg-gray-700 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                    {comment.user.avatarUrl ? (
+                        <Image src={comment.user.avatarUrl} alt={displayName} width={40} height={40} className="object-cover" />
+                    ) : (
+                        <span className="text-white font-bold">{initial}</span>
+                    )}
                 </div>
                 <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                         <span className="font-bold text-white text-sm flex items-center gap-1">
-                            {comment.user}
-                            {comment.isAdmin && (
+                            {displayName}
+                            {comment.user.isAdmin && (
                                 <>
                                     <BadgeCheck size={16} className="text-blue-400 fill-blue-400/20" />
                                     <ShieldCheck size={16} className="text-green-400 fill-green-400/20" />
                                 </>
                             )}
-                            {comment.isVerified && !comment.isAdmin && (
-                                <BadgeCheck size={16} className="text-blue-400 fill-blue-400/20" />
-                            )}
                         </span>
-                        <span className="text-xs text-gray-500">{new Date(comment.date).toLocaleDateString()}</span>
+                        <span className="text-xs text-gray-500">{new Date(comment.createdAt).toLocaleDateString("id-ID")}</span>
                     </div>
-                    <p className="text-gray-300 text-sm mb-2">
+                    <p className="text-gray-300 text-sm mb-2 whitespace-pre-wrap">
                         {comment.content}
                     </p>
                     <div className="flex items-center gap-4 text-xs text-gray-500">
                         <button
                             onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
                             className="flex items-center gap-1 hover:text-white"
+                            disabled={!isLoggedIn}
                         >
                             <MessageSquare size={14} /> Balas
                         </button>
-                        <button onClick={() => handleLike(comment.id, false)} className="flex items-center gap-1 hover:text-white">
+                        <button
+                            onClick={() => onVote(comment.id, false)}
+                            className={`flex items-center gap-1 hover:text-white ${comment.userVote === "like" ? "text-green-400" : ""}`}
+                        >
                             <ThumbsUp size={14} /> {comment.likes}
                         </button>
-                        <button onClick={() => handleLike(comment.id, true)} className="flex items-center gap-1 hover:text-white">
+                        <button
+                            onClick={() => onVote(comment.id, true)}
+                            className={`flex items-center gap-1 hover:text-white ${comment.userVote === "dislike" ? "text-red-400" : ""}`}
+                        >
                             <ThumbsUp size={14} className="rotate-180" /> {comment.dislikes}
                         </button>
 
@@ -225,7 +232,7 @@ function CommentItem({
                                     </button>
                                     <button
                                         onClick={() => {
-                                            handleCopyLink(comment.id)
+                                            onCopyLink(comment.id)
                                             setShowOptions(false)
                                         }}
                                         className="w-full text-left px-3 py-2 text-xs text-white hover:bg-gray-700 flex items-center gap-2"
@@ -243,13 +250,10 @@ function CommentItem({
                             <CommentInput
                                 value={replyContent}
                                 onChange={setReplyContent}
-                                onSubmit={() => {
-                                    console.log("Reply submitted:", replyContent)
-                                    setReplyContent("")
-                                    setReplyingTo(null)
-                                }}
-                                placeholder={`Balas ${comment.user}...`}
+                                onSubmit={handleSubmitReply}
+                                placeholder={`Balas ${displayName}...`}
                                 isLoggedIn={isLoggedIn}
+                                isLoading={isSubmitting}
                                 autoFocus
                             />
                         </div>
@@ -258,15 +262,17 @@ function CommentItem({
                     {/* Nested Replies */}
                     {comment.replies && comment.replies.length > 0 && (
                         <div className="mt-4 space-y-4 pl-4 border-l-2 border-gray-800">
-                            {comment.replies.map((reply: any) => (
+                            {comment.replies.map((reply) => (
                                 <CommentItem
                                     key={reply.id}
                                     comment={reply}
+                                    movieSlug={movieSlug}
                                     isLoggedIn={isLoggedIn}
                                     replyingTo={replyingTo}
                                     setReplyingTo={setReplyingTo}
-                                    handleLike={handleLike}
-                                    handleCopyLink={handleCopyLink}
+                                    onVote={onVote}
+                                    onReply={onReply}
+                                    onCopyLink={onCopyLink}
                                 />
                             ))}
                         </div>
@@ -277,16 +283,61 @@ function CommentItem({
     )
 }
 
-export default function CommentsSection() {
-    const [comments, setComments] = useState(INITIAL_COMMENTS)
+interface CommentsSectionProps {
+    movieId: number
+    movieSlug: string
+}
+
+export default function CommentsSection({ movieId, movieSlug }: CommentsSectionProps) {
+    const { data: session } = useSession()
+    const { showToast } = useToast()
+
+    const [comments, setComments] = useState<CommentData[]>([])
+    const [isLoading, setIsLoading] = useState(true)
     const [sortBy, setSortBy] = useState<"newest" | "oldest" | "likes">("newest")
     const [showSortMenu, setShowSortMenu] = useState(false)
     const [newComment, setNewComment] = useState("")
     const [replyingTo, setReplyingTo] = useState<number | null>(null)
+    const [isSubmitting, setIsSubmitting] = useState(false)
     const sortMenuRef = useRef<HTMLDivElement>(null)
 
-    // Mock Auth State
-    const isLoggedIn = false // Change to true to test logged in state
+    const isLoggedIn = !!session?.user
+
+    // Fetch comments
+    const fetchComments = useCallback(async () => {
+        try {
+            const res = await fetch(`/api/comments?movieId=${movieId}`)
+            const data = await res.json()
+            if (data.comments) {
+                setComments(data.comments)
+            }
+        } catch (error) {
+            console.error("Error fetching comments:", error)
+        } finally {
+            setIsLoading(false)
+        }
+    }, [movieId])
+
+    useEffect(() => {
+        fetchComments()
+    }, [fetchComments])
+
+    // Scroll to comment on hash
+    useEffect(() => {
+        if (typeof window !== "undefined" && window.location.hash) {
+            const hash = window.location.hash
+            if (hash.startsWith("#comment-")) {
+                setTimeout(() => {
+                    const element = document.querySelector(hash)
+                    if (element) {
+                        element.scrollIntoView({ behavior: "smooth", block: "center" })
+                        element.classList.add("bg-primary/10")
+                        setTimeout(() => element.classList.remove("bg-primary/10"), 3000)
+                    }
+                }, 500)
+            }
+        }
+    }, [comments])
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -302,21 +353,112 @@ export default function CommentsSection() {
         setSortBy(type)
         setShowSortMenu(false)
         const sorted = [...comments].sort((a, b) => {
-            if (type === "newest") return new Date(b.date).getTime() - new Date(a.date).getTime()
-            if (type === "oldest") return new Date(a.date).getTime() - new Date(b.date).getTime()
+            if (type === "newest") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            if (type === "oldest") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
             if (type === "likes") return b.likes - a.likes
             return 0
         })
         setComments(sorted)
     }
 
-    const handleLike = (id: number, isDislike: boolean) => {
-        console.log(`Liked/Disliked comment ${id}, dislike: ${isDislike}`)
+    const handleVote = async (commentId: number, isDislike: boolean) => {
+        if (!isLoggedIn) {
+            showToast("Silakan login untuk memberi vote", "info")
+            return
+        }
+
+        try {
+            const res = await fetch(`/api/comments/${commentId}/vote`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ isDislike })
+            })
+            const data = await res.json()
+
+            if (data.success) {
+                // Update comment in state
+                const updateCommentVotes = (comments: CommentData[]): CommentData[] => {
+                    return comments.map(c => {
+                        if (c.id === commentId) {
+                            return { ...c, likes: data.likes, dislikes: data.dislikes, userVote: data.userVote }
+                        }
+                        if (c.replies.length > 0) {
+                            return { ...c, replies: updateCommentVotes(c.replies) }
+                        }
+                        return c
+                    })
+                }
+                setComments(updateCommentVotes(comments))
+            }
+        } catch (error) {
+            console.error("Error voting:", error)
+        }
     }
 
-    const handleCopyLink = (id: number) => {
-        navigator.clipboard.writeText(`${window.location.origin}/movie/1#comment-${id}`)
-        alert("Link komentar disalin!")
+    const handleSubmitComment = async () => {
+        if (!newComment.trim() || isSubmitting) return
+        setIsSubmitting(true)
+
+        try {
+            const res = await fetch("/api/comments", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ movieId, content: newComment })
+            })
+            const data = await res.json()
+
+            if (data.success) {
+                setComments([data.comment, ...comments])
+                setNewComment("")
+                showToast("Komentar berhasil dikirim!", "success")
+            } else {
+                showToast(data.error || "Gagal mengirim komentar", "error")
+            }
+        } catch (error) {
+            console.error("Error submitting comment:", error)
+            showToast("Gagal mengirim komentar", "error")
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    const handleReply = async (parentId: number, content: string) => {
+        try {
+            const res = await fetch("/api/comments", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ movieId, content, parentId })
+            })
+            const data = await res.json()
+
+            if (data.success) {
+                // Add reply to parent comment
+                const addReplyToComment = (comments: CommentData[]): CommentData[] => {
+                    return comments.map(c => {
+                        if (c.id === parentId) {
+                            return { ...c, replies: [...c.replies, data.comment] }
+                        }
+                        if (c.replies.length > 0) {
+                            return { ...c, replies: addReplyToComment(c.replies) }
+                        }
+                        return c
+                    })
+                }
+                setComments(addReplyToComment(comments))
+                showToast("Balasan berhasil dikirim!", "success")
+            } else {
+                showToast(data.error || "Gagal mengirim balasan", "error")
+            }
+        } catch (error) {
+            console.error("Error submitting reply:", error)
+            showToast("Gagal mengirim balasan", "error")
+        }
+    }
+
+    const handleCopyLink = (commentId: number) => {
+        const url = `${window.location.origin}/movie/${movieSlug}#comment-${commentId}`
+        navigator.clipboard.writeText(url)
+        showToast("Link komentar disalin!", "success")
     }
 
     const getSortLabel = () => {
@@ -360,40 +502,40 @@ export default function CommentsSection() {
                 <CommentInput
                     value={newComment}
                     onChange={setNewComment}
-                    onSubmit={() => {
-                        console.log("Comment submitted:", newComment)
-                        setNewComment("")
-                    }}
+                    onSubmit={handleSubmitComment}
                     placeholder={isLoggedIn ? "Tinggalkan komentar..." : "Silakan login terlebih dahulu"}
                     isLoggedIn={isLoggedIn}
+                    isLoading={isSubmitting}
                 />
             </div>
 
             {/* Comments List */}
-            <div className="space-y-6">
-                {comments.map((comment) => (
-                    <CommentItem
-                        key={comment.id}
-                        comment={comment}
-                        isLoggedIn={isLoggedIn}
-                        replyingTo={replyingTo}
-                        setReplyingTo={setReplyingTo}
-                        handleLike={handleLike}
-                        handleCopyLink={handleCopyLink}
-                    />
-                ))}
-            </div>
-
-            {/* Pagination */}
-            <div className="flex justify-center gap-2 mt-8">
-                <button className="w-8 h-8 flex items-center justify-center bg-[#252525] text-gray-400 rounded hover:bg-primary hover:text-black transition-colors">{"<"}</button>
-                <button className="w-8 h-8 flex items-center justify-center bg-primary text-black rounded font-bold">1</button>
-                <button className="w-8 h-8 flex items-center justify-center bg-[#252525] text-gray-400 rounded hover:bg-primary hover:text-black transition-colors">2</button>
-                <button className="w-8 h-8 flex items-center justify-center bg-[#252525] text-gray-400 rounded hover:bg-primary hover:text-black transition-colors">3</button>
-                <span className="flex items-end text-gray-500">...</span>
-                <button className="w-8 h-8 flex items-center justify-center bg-[#252525] text-gray-400 rounded hover:bg-primary hover:text-black transition-colors">5</button>
-                <button className="w-8 h-8 flex items-center justify-center bg-[#252525] text-gray-400 rounded hover:bg-primary hover:text-black transition-colors">{">"}</button>
-            </div>
+            {isLoading ? (
+                <div className="text-center py-8 text-gray-500">
+                    <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2" />
+                    Memuat komentar...
+                </div>
+            ) : comments.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                    Belum ada komentar. Jadilah yang pertama berkomentar!
+                </div>
+            ) : (
+                <div className="space-y-6">
+                    {comments.map((comment) => (
+                        <CommentItem
+                            key={comment.id}
+                            comment={comment}
+                            movieSlug={movieSlug}
+                            isLoggedIn={isLoggedIn}
+                            replyingTo={replyingTo}
+                            setReplyingTo={setReplyingTo}
+                            onVote={handleVote}
+                            onReply={handleReply}
+                            onCopyLink={handleCopyLink}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     )
 }

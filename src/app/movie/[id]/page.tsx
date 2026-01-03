@@ -90,7 +90,7 @@ export default async function MovieDetail({
       />
 
       <div className="max-w-7xl mx-auto px-4">
-        <CommentsSection />
+        <CommentsSection movieId={movieId} movieSlug={movie.slug} />
       </div>
     </div>
   )
