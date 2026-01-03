@@ -57,9 +57,41 @@ export default function UserAutocomplete({ value, onChange, placeholder, classNa
         setIsOpen(false)
     }
 
+    const handleClear = () => {
+        setQuery("")
+        setSelectedUser(null)
+        onChange("", null)
+    }
+
     return (
         <div ref={wrapperRef} className="relative">
-            <div className="relative">
+            {/* Show pill button when user is selected, otherwise show input */}
+            {selectedUser ? (
+                <div className={`flex items-center gap-2 bg-primary/10 border border-primary/30 rounded-lg px-3 py-2.5`}>
+                    <div className="w-6 h-6 rounded-full bg-gray-600 overflow-hidden flex-shrink-0 relative">
+                        {selectedUser.avatarUrl ? (
+                            <Image src={selectedUser.avatarUrl} alt={selectedUser.username} fill className="object-cover" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold">
+                                {selectedUser.username?.charAt(0).toUpperCase()}
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="text-white font-medium text-sm truncate">
+                            {selectedUser.name || selectedUser.username}
+                        </div>
+                        <div className="text-primary text-xs">@{selectedUser.username}</div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={handleClear}
+                        className="p-1 hover:bg-red-500/20 rounded text-gray-400 hover:text-red-400 transition-colors"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+            ) : (
                 <input
                     type="text"
                     value={query}
@@ -67,23 +99,7 @@ export default function UserAutocomplete({ value, onChange, placeholder, classNa
                     className={className}
                     placeholder={placeholder}
                 />
-                {selectedUser && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 text-primary text-xs bg-primary/10 px-2 py-1 rounded-full">
-                        <User size={12} />
-                        <span>Terhubung: @{selectedUser.username}</span>
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                handleSearch(query) // Reset selection but keep text
-                            }}
-                            className="hover:text-red-400"
-                        >
-                            <X size={12} />
-                        </button>
-                    </div>
-                )}
-            </div>
+            )}
 
             {isOpen && suggestions.length > 0 && (
                 <div className="absolute z-50 w-full mt-1 bg-[#252525] border border-gray-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">

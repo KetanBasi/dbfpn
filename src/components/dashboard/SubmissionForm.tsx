@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Upload, Link as LinkIcon, Plus, Trash2, HelpCircle } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { Upload, Link as LinkIcon, Plus, Trash2, HelpCircle, Tag, X, ChevronDown } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/Toast"
 import { submitMovie } from "@/app/actions/movie"
@@ -17,6 +17,12 @@ interface Actor {
     name: string
     role: string
     userId?: number | null
+}
+
+interface Genre {
+    id: number
+    name: string
+    slug: string
 }
 
 export default function SubmissionForm({ maxActors, initialData }: SubmissionFormProps) {
@@ -36,8 +42,43 @@ export default function SubmissionForm({ maxActors, initialData }: SubmissionFor
 
     const [isSubmitting, setIsSubmitting] = useState(false)
 
+    // Genres state
+    const [allGenres, setAllGenres] = useState<Genre[]>([])
+    const [selectedGenres, setSelectedGenres] = useState<Genre[]>(
+        initialData?.genres?.map((g: any) => g.genre) || []
+    )
+    const [showGenreDropdown, setShowGenreDropdown] = useState(false)
+    const genreDropdownRef = useRef<HTMLDivElement>(null)
+
     const { showToast } = useToast()
     const router = useRouter()
+
+    // Fetch genres on mount
+    useEffect(() => {
+        const fetchGenres = async () => {
+            try {
+                const res = await fetch("/api/genres")
+                const data = await res.json()
+                if (data.genres) {
+                    setAllGenres(data.genres)
+                }
+            } catch (error) {
+                console.error("Error fetching genres:", error)
+            }
+        }
+        fetchGenres()
+    }, [])
+
+    // Click outside handler for genre dropdown
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (genreDropdownRef.current && !genreDropdownRef.current.contains(event.target as Node)) {
+                setShowGenreDropdown(false)
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside)
+        return () => document.removeEventListener("mousedown", handleClickOutside)
+    }, [])
 
     const addActor = () => {
         if (actors.length < maxActors) {
@@ -60,6 +101,14 @@ export default function SubmissionForm({ maxActors, initialData }: SubmissionFor
         setActors(newActors)
     }
 
+    const toggleGenre = (genre: Genre) => {
+        if (selectedGenres.find(g => g.id === genre.id)) {
+            setSelectedGenres(selectedGenres.filter(g => g.id !== genre.id))
+        } else {
+            setSelectedGenres([...selectedGenres, genre])
+        }
+    }
+
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         setIsSubmitting(true)
@@ -80,7 +129,8 @@ export default function SubmissionForm({ maxActors, initialData }: SubmissionFor
             directorId,
             writer,
             writerId,
-            actors: actors.filter(a => a.name.trim() !== "")
+            actors: actors.filter(a => a.name.trim() !== ""),
+            genres: selectedGenres.map(g => g.id)
         }
 
         const result = await submitMovie(submissionData)
@@ -130,6 +180,63 @@ export default function SubmissionForm({ maxActors, initialData }: SubmissionFor
                             className="w-full bg-[#252525] border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary"
                             placeholder="Contoh: 148"
                         />
+                    </div>
+                </div>
+
+                {/* Genre Selection */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                        <Tag size={14} /> Genre
+                    </label>
+
+                    {/* Selected Genres Pills */}
+                    <div className="flex flex-wrap gap-2 mb-2">
+                        {selectedGenres.map(genre => (
+                            <span
+                                key={genre.id}
+                                className="flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm border border-primary/30"
+                            >
+                                {genre.name}
+                                <button
+                                    type="button"
+                                    onClick={() => toggleGenre(genre)}
+                                    className="hover:text-red-400 transition-colors"
+                                >
+                                    <X size={14} />
+                                </button>
+                            </span>
+                        ))}
+                    </div>
+
+                    {/* Dropdown Trigger */}
+                    <div ref={genreDropdownRef} className="relative">
+                        <button
+                            type="button"
+                            onClick={() => setShowGenreDropdown(!showGenreDropdown)}
+                            className="w-full bg-[#252525] border border-gray-700 rounded-lg px-4 py-3 text-left text-gray-400 hover:border-gray-600 transition-colors flex items-center justify-between"
+                        >
+                            <span>{selectedGenres.length === 0 ? "Pilih genre..." : `${selectedGenres.length} genre dipilih`}</span>
+                            <ChevronDown size={16} className={`transition-transform ${showGenreDropdown ? "rotate-180" : ""}`} />
+                        </button>
+
+                        {showGenreDropdown && (
+                            <div className="absolute z-50 w-full mt-1 bg-[#252525] border border-gray-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                                {allGenres.map(genre => (
+                                    <button
+                                        key={genre.id}
+                                        type="button"
+                                        onClick={() => toggleGenre(genre)}
+                                        className={`w-full text-left px-4 py-2 hover:bg-gray-700 transition-colors flex items-center justify-between ${selectedGenres.find(g => g.id === genre.id) ? "bg-primary/10 text-primary" : "text-white"
+                                            }`}
+                                    >
+                                        <span>{genre.name}</span>
+                                        {selectedGenres.find(g => g.id === genre.id) && (
+                                            <span className="text-primary">✓</span>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
 

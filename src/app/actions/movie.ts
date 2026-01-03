@@ -25,6 +25,7 @@ interface MovieSubmissionData {
     writer: string
     writerId?: number | null
     actors: ActorInput[]
+    genres?: number[] // Array of genre IDs
 }
 
 export async function submitMovie(data: MovieSubmissionData) {
@@ -94,6 +95,11 @@ export async function submitMovie(data: MovieSubmissionData) {
                 where: { movieId: data.id }
             })
 
+            // Delete existing genre relations
+            await prisma.movieGenre.deleteMany({
+                where: { movieId: data.id }
+            })
+
             await prisma.movie.update({
                 where: { id: data.id },
                 data: {
@@ -128,6 +134,16 @@ export async function submitMovie(data: MovieSubmissionData) {
                     }
                 }
             })
+
+            // Connect genres
+            if (data.genres && data.genres.length > 0) {
+                await prisma.movieGenre.createMany({
+                    data: data.genres.map(genreId => ({
+                        movieId: data.id!,
+                        genreId
+                    }))
+                })
+            }
 
             revalidatePath("/dashboard/submissions")
             return { success: true, message: "Film berhasil diperbarui!" }
@@ -172,6 +188,22 @@ export async function submitMovie(data: MovieSubmissionData) {
                     }
                 }
             })
+
+            // Connect genres for new movie
+            if (data.genres && data.genres.length > 0) {
+                // Get the movie we just created by slug
+                const createdMovie = await prisma.movie.findUnique({
+                    where: { slug: uniqueSlug }
+                })
+                if (createdMovie) {
+                    await prisma.movieGenre.createMany({
+                        data: data.genres.map(genreId => ({
+                            movieId: createdMovie.id,
+                            genreId
+                        }))
+                    })
+                }
+            }
 
             revalidatePath("/dashboard/submissions")
             return { success: true, message: "Film berhasil dikirim!" }
