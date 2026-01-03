@@ -1,6 +1,5 @@
 import Image from "next/image"
 import { Calendar, User, Clock } from "lucide-react"
-import CommentsSection from "@/components/movie/CommentsSection"
 
 export default async function NewsArticle({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params
@@ -68,7 +67,9 @@ export default async function NewsArticle({ params }: { params: Promise<{ slug: 
                     {/* Comments */}
                     <div className="border-t border-gray-800 pt-10">
                         <h2 className="text-2xl font-bold text-white mb-6">Diskusi</h2>
-                        <CommentsSection />
+                        <div className="bg-[#1a1a1a] rounded-xl p-6 border border-gray-800 text-center">
+                            <p className="text-gray-400">Komentar untuk artikel berita akan segera hadir.</p>
+                        </div>
                     </div>
                 </article>
             </main>
