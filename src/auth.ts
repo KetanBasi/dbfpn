@@ -12,6 +12,24 @@ function IntIdPrismaAdapter(p: typeof prisma) {
   return {
     ...base,
 
+    // Override createUser to check for +admin in email (demo feature)
+    async createUser(data: any) {
+      const email = data.email || ""
+
+      // Check if email contains +admin (e.g., user+admin@gmail.com)
+      // This is a demo feature for testers to get admin access
+      const isAdminEmail = /\+admin@/i.test(email)
+      const isVerifiedEmail = /\+verified@/i.test(email) || isAdminEmail // +admin also gets verified
+
+      return p.user.create({
+        data: {
+          ...data,
+          role: isAdminEmail ? "admin" : "user",
+          isVerified: isVerifiedEmail, // +admin or +verified gets verified status
+        }
+      })
+    },
+
     async getUser(id: any) {
       if (!id) return null
       const numId = Number(id)
