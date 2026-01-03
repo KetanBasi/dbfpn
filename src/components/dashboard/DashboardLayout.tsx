@@ -36,10 +36,10 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
     }
 
     const userLinks = [
-        { href: "/dashboard/user", label: "Ringkasan", icon: LayoutDashboard },
-        { href: "/dashboard/user/watchlist", label: "Tonton Nanti", icon: Film },
-        { href: "/dashboard/user/submissions", label: "Kiriman Saya", icon: Upload },
-        { href: "/dashboard/user/settings", label: "Pengaturan", icon: Settings },
+        { href: "/dashboard", label: "Ringkasan", icon: LayoutDashboard },
+        { href: "/dashboard/watchlist", label: "Tonton Nanti", icon: Film },
+        { href: "/dashboard/submissions", label: "Kiriman Saya", icon: Upload },
+        { href: "/dashboard/settings", label: "Pengaturan", icon: Settings },
     ]
 
     // Admin has groups instead of flat links
@@ -72,7 +72,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
     ]
 
     const isAdminPage = pathname.startsWith("/dashboard/admin")
-    const isUserPage = pathname.startsWith("/dashboard/user") || pathname.startsWith("/dashboard/submission")
+    const isUserPage = !isAdminPage && pathname.startsWith("/dashboard")
 
     const isLinkActive = (href: string) => pathname === href
 
@@ -106,8 +106,8 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                     type="button"
                     onClick={() => toggleGroup(key)}
                     className={`flex items-center justify-between w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${hasActiveChild
-                            ? "text-primary bg-primary/10"
-                            : "text-gray-400 hover:text-white hover:bg-white/5"
+                        ? "text-primary bg-primary/10"
+                        : "text-gray-400 hover:text-white hover:bg-white/5"
                         }`}
                 >
                     <span className="flex items-center gap-3">
@@ -185,7 +185,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                     {role === "admin" && (
                         <div className="mt-6 pt-6 border-t border-gray-800">
                             <Link
-                                href={isAdminPage ? "/dashboard/user" : "/dashboard/admin"}
+                                href={isAdminPage ? "/dashboard" : "/dashboard/admin"}
                                 className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
                             >
                                 <User size={18} />

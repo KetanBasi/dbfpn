@@ -15,7 +15,7 @@ export default async function CommentModerationPage() {
         select: { role: true }
     })
 
-    if (!me || me.role !== "admin") redirect("/dashboard/user")
+    if (!me || me.role !== "admin") redirect("/dashboard")
 
     return (
         <>

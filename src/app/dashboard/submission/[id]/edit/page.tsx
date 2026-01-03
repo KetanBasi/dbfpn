@@ -28,7 +28,7 @@ export default async function EditSubmission({ params }: { params: Promise<{ id:
 
     // Check ownership or admin
     if (movie.submitterId !== Number(session.user.id) && session.user.role !== "admin") {
-        redirect("/dashboard/user/submissions")
+        redirect("/dashboard/submissions")
     }
 
     return (

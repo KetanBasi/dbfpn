@@ -40,7 +40,7 @@ export async function updateProfile(formData: FormData) {
             }
         })
 
-        revalidatePath("/dashboard/user/settings")
+        revalidatePath("/dashboard/settings")
         revalidatePath(`/user/${username || session.user.id}`)
 
         return { success: true }

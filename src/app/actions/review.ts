@@ -51,7 +51,7 @@ export async function submitReview(movieId: number, rating: number, content: str
         }
 
         revalidatePath(`/user/${user.username}`)
-        revalidatePath(`/dashboard/user`)
+        revalidatePath(`/dashboard`)
 
         return { success: true }
     } catch (error) {

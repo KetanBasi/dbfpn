@@ -129,7 +129,7 @@ export async function submitMovie(data: MovieSubmissionData) {
                 }
             })
 
-            revalidatePath("/dashboard/user/submissions")
+            revalidatePath("/dashboard/submissions")
             return { success: true, message: "Film berhasil diperbarui!" }
 
         } else {
@@ -173,7 +173,7 @@ export async function submitMovie(data: MovieSubmissionData) {
                 }
             })
 
-            revalidatePath("/dashboard/user/submissions")
+            revalidatePath("/dashboard/submissions")
             return { success: true, message: "Film berhasil dikirim!" }
         }
 

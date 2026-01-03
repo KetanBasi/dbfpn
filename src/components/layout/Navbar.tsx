@@ -169,7 +169,7 @@ export default function Navbar() {
                     )}
 
                     <Link
-                      href="/dashboard/user"
+                      href="/dashboard"
                       onClick={() => setIsProfileDropdownOpen(false)}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#252525] hover:text-white transition-colors"
                     >
@@ -201,7 +201,7 @@ export default function Navbar() {
                     </Link>
 
                     <Link
-                      href="/dashboard/user/submissions"
+                      href="/dashboard/submissions"
                       onClick={() => setIsProfileDropdownOpen(false)}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#252525] hover:text-white transition-colors"
                     >
@@ -210,7 +210,7 @@ export default function Navbar() {
                     </Link>
 
                     <Link
-                      href="/dashboard/user/settings"
+                      href="/dashboard/settings"
                       onClick={() => setIsProfileDropdownOpen(false)}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#252525] hover:text-white transition-colors"
                     >

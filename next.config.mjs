@@ -15,9 +15,22 @@ const nextConfig = {
   },
   async rewrites() {
     return [
+      // Rewrite /dashboard routes to /dashboard/user (cleaner URLs)
       {
         source: '/dashboard',
         destination: '/dashboard/user',
+      },
+      {
+        source: '/dashboard/watchlist',
+        destination: '/dashboard/user/watchlist',
+      },
+      {
+        source: '/dashboard/submissions',
+        destination: '/dashboard/user/submissions',
+      },
+      {
+        source: '/dashboard/settings',
+        destination: '/dashboard/user/settings',
       },
     ]
   },

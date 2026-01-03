@@ -29,7 +29,7 @@ export default async function AdminModerationPage() {
     select: { role: true },
   })
 
-  if (!me || me.role !== "admin") redirect("/dashboard/user")
+  if (!me || me.role !== "admin") redirect("/dashboard")
 
   const [pendingCount, oldestPending] = await Promise.all([
     prisma.report.count({
@@ -172,8 +172,8 @@ export default async function AdminModerationPage() {
                                   <div className="mt-2 flex gap-2">
                                     <span
                                       className={`px-2 py-0.5 rounded-full text-xs font-bold border ${u.status === "banned"
-                                          ? "bg-red-500/10 text-red-400 border-red-500/20"
-                                          : "bg-green-500/10 text-green-400 border-green-500/20"
+                                        ? "bg-red-500/10 text-red-400 border-red-500/20"
+                                        : "bg-green-500/10 text-green-400 border-green-500/20"
                                         }`}
                                     >
                                       {u.status}

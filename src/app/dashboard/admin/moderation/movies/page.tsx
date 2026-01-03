@@ -54,7 +54,7 @@ export default async function AdminMovies() {
         select: { role: true }
     })
 
-    if (!me || me.role !== "admin") redirect("/dashboard/user")
+    if (!me || me.role !== "admin") redirect("/dashboard")
 
     // Fetch movies awaiting moderation (pending and revision)
     const pendingMovies = await prisma.movie.findMany({

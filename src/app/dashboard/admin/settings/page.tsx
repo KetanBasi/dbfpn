@@ -70,7 +70,7 @@ export default function AdminSettings() {
                     <h3 className="text-blue-400 font-bold mb-1">Pengaturan Akun Pribadi</h3>
                     <p className="text-gray-400 text-sm">Ingin mengubah kata sandi atau profil admin Anda?</p>
                 </div>
-                <Link href="/dashboard/user/settings" className="px-4 py-2 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg font-medium text-sm transition-colors flex items-center gap-2">
+                <Link href="/dashboard/settings" className="px-4 py-2 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg font-medium text-sm transition-colors flex items-center gap-2">
                     <SettingsIcon size={16} />
                     Buka Pengaturan Akun
                 </Link>

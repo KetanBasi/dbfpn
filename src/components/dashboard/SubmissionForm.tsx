@@ -87,7 +87,7 @@ export default function SubmissionForm({ maxActors, initialData }: SubmissionFor
 
         if (result.success) {
             showToast(result.message, "success")
-            router.push("/dashboard/user/submissions") // Redirect to submissions list
+            router.push("/dashboard/submissions") // Redirect to submissions list
             router.refresh()
         } else {
             showToast(result.message, "error")

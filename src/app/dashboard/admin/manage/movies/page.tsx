@@ -62,7 +62,7 @@ export default async function ManageMoviesPage({
         select: { role: true }
     })
 
-    if (!me || me.role !== "admin") redirect("/dashboard/user")
+    if (!me || me.role !== "admin") redirect("/dashboard")
 
     const { q } = await searchParams
     const searchQuery = q?.trim() || ""
