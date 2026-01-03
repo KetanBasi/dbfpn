@@ -9,10 +9,11 @@ export default auth(async function middleware(request: NextRequest) {
     const session = await auth()
     const path = request.nextUrl.pathname
 
-    // Skip profile completion check for these paths
+    // Skip these paths from middleware processing
     const skipPaths = [
         "/complete-profile",
         "/signin",
+        "/account-disabled",
         "/api",
         "/_next",
         "/favicon.ico",
@@ -27,12 +28,10 @@ export default auth(async function middleware(request: NextRequest) {
         const userStatus = (session.user as any).status
         const username = (session.user as any).username
 
-        // Check if user is banned or inactive - redirect to signin with message
+        // Check if user is banned or inactive - redirect to auto-signout page
         if (userStatus === "banned" || userStatus === "inactive") {
-            // Clear session by redirecting to signout then signin
-            const signOutUrl = new URL("/api/auth/signout", request.url)
-            signOutUrl.searchParams.set("callbackUrl", "/signin?error=AccountDisabled")
-            return NextResponse.redirect(signOutUrl)
+            const disabledUrl = new URL("/account-disabled", request.url)
+            return NextResponse.redirect(disabledUrl)
         }
 
         // If user has no username, redirect to complete profile
