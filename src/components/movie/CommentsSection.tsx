@@ -148,6 +148,7 @@ function CommentItem({
     onVote,
     onReply,
     onDelete,
+    onReport,
     onCopyLink,
     depth = 0
 }: {
@@ -162,6 +163,7 @@ function CommentItem({
     onVote: (commentId: number, isDislike: boolean) => void
     onReply: (parentId: number, content: string) => Promise<void>
     onDelete: (commentId: number) => Promise<void>
+    onReport: (commentId: number, reason: string) => Promise<void>
     onCopyLink: (commentId: number) => void
     depth?: number
 }) {
@@ -170,6 +172,9 @@ function CommentItem({
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
     const [isCollapsed, setIsCollapsed] = useState(false)
+    const [showDeleteModal, setShowDeleteModal] = useState(false)
+    const [showReportModal, setShowReportModal] = useState(false)
+    const [isReporting, setIsReporting] = useState(false)
     const optionsRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -200,15 +205,28 @@ function CommentItem({
     }
 
     const handleDelete = async () => {
-        if (!confirm("Yakin ingin menghapus komentar ini?")) return
         setIsDeleting(true)
         try {
             await onDelete(comment.id)
+            setShowDeleteModal(false)
             setShowOptions(false)
         } finally {
             setIsDeleting(false)
         }
     }
+
+    const handleReport = async (reason: string) => {
+        setIsReporting(true)
+        try {
+            await onReport(comment.id, reason)
+            setShowReportModal(false)
+            setShowOptions(false)
+        } finally {
+            setIsReporting(false)
+        }
+    }
+
+    const userProfileLink = comment.user.username ? `/user/${comment.user.username}` : null
 
     return (
         <div id={`comment-${comment.id}`} className="scroll-mt-24 group">
@@ -236,8 +254,15 @@ function CommentItem({
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                                 <span className={`font-bold text-sm flex items-center gap-1 ${isDeleted ? "text-gray-500 italic" : "text-white"}`}>
-                                    {isDeleted ? "[dihapus]" : displayName}
-                                    {!isDeleted && comment.user.isVerified && (
+                                    {isDeleted ? "[dihapus]" : (
+                                        userProfileLink ? (
+                                            <Link href={userProfileLink} className="hover:text-primary transition-colors">
+                                                {displayName}
+                                            </Link>
+                                        ) : displayName
+                                    )}
+                                    {/* Admin always gets verified badge */}
+                                    {!isDeleted && (comment.user.isVerified || comment.user.isAdmin) && (
                                         <BadgeCheck size={14} className="text-blue-400 fill-blue-400/20" />
                                     )}
                                     {!isDeleted && comment.user.isAdmin && (
@@ -290,16 +315,26 @@ function CommentItem({
                                                 >
                                                     <LinkIcon size={12} /> Salin Link
                                                 </button>
-                                                <button className="w-full text-left px-3 py-2 text-xs text-white hover:bg-red-500/20 hover:text-red-400 flex items-center gap-2">
-                                                    <Flag size={12} /> Laporkan
-                                                </button>
+                                                {isLoggedIn && !comment.isOwner && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setShowReportModal(true)
+                                                            setShowOptions(false)
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 text-xs text-white hover:bg-red-500/20 hover:text-red-400 flex items-center gap-2"
+                                                    >
+                                                        <Flag size={12} /> Laporkan
+                                                    </button>
+                                                )}
                                                 {comment.isOwner && (
                                                     <button
-                                                        onClick={handleDelete}
-                                                        disabled={isDeleting}
+                                                        onClick={() => {
+                                                            setShowDeleteModal(true)
+                                                            setShowOptions(false)
+                                                        }}
                                                         className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-red-500/20 flex items-center gap-2"
                                                     >
-                                                        <Trash2 size={12} /> {isDeleting ? "Menghapus..." : "Hapus Komentar"}
+                                                        <Trash2 size={12} /> Hapus Komentar
                                                     </button>
                                                 )}
                                             </div>
@@ -353,6 +388,7 @@ function CommentItem({
                                         onVote={onVote}
                                         onReply={onReply}
                                         onDelete={onDelete}
+                                        onReport={onReport}
                                         onCopyLink={onCopyLink}
                                         depth={depth + 1}
                                     />
@@ -362,6 +398,25 @@ function CommentItem({
                     )}
                 </div>
             </div>
+
+            {/* Delete Modal */}
+            <DeleteConfirmModal
+                isOpen={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={handleDelete}
+                message="Yakin ingin menghapus komentar ini? Komentar akan ditampilkan sebagai '[Komentar ini telah dihapus]'."
+                isLoading={isDeleting}
+            />
+
+            {/* Report Modal */}
+            <ReportModal
+                isOpen={showReportModal}
+                onClose={() => setShowReportModal(false)}
+                onSubmit={handleReport}
+                title="Laporkan Komentar"
+                placeholder="Jelaskan alasan pelaporan komentar ini..."
+                isLoading={isReporting}
+            />
         </div>
     )
 }
@@ -584,6 +639,26 @@ export default function CommentsSection({ movieId, movieSlug }: CommentsSectionP
         showToast("Link komentar disalin!", "success")
     }
 
+    const handleReport = async (commentId: number, reason: string) => {
+        try {
+            const res = await fetch(`/api/comments/${commentId}/report`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reason })
+            })
+            const data = await res.json()
+
+            if (data.success) {
+                showToast("Laporan berhasil dikirim", "success")
+            } else {
+                showToast(data.error || "Gagal mengirim laporan", "error")
+            }
+        } catch (error) {
+            console.error("Error reporting comment:", error)
+            showToast("Gagal mengirim laporan", "error")
+        }
+    }
+
     const getSortLabel = () => {
         switch (sortBy) {
             case "newest": return "Terbaru"
@@ -658,6 +733,7 @@ export default function CommentsSection({ movieId, movieSlug }: CommentsSectionP
                             onVote={handleVote}
                             onReply={handleReply}
                             onDelete={handleDelete}
+                            onReport={handleReport}
                             onCopyLink={handleCopyLink}
                             depth={0}
                         />

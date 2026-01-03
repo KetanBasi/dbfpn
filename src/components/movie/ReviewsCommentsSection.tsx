@@ -35,7 +35,9 @@ function ReviewItem({
     isLoggedIn,
     currentUserId,
     onVote,
-    onCopyLink
+    onCopyLink,
+    onReport,
+    onDelete
 }: {
     review: ReviewData
     movieSlug: string
@@ -43,11 +45,18 @@ function ReviewItem({
     currentUserId: number | null
     onVote: (reviewId: number, isAgree: boolean) => void
     onCopyLink: (reviewId: number) => void
+    onReport: (reviewId: number, reason: string) => Promise<void>
+    onDelete: (reviewId: number) => Promise<void>
 }) {
     const [showOptions, setShowOptions] = useState(false)
+    const [showDeleteModal, setShowDeleteModal] = useState(false)
+    const [showReportModal, setShowReportModal] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
+    const [isReporting, setIsReporting] = useState(false)
     const optionsRef = useRef<HTMLDivElement>(null)
     const displayName = review.name || review.username || `User`
     const initial = displayName.charAt(0).toUpperCase()
+    const userProfileLink = review.username ? `/user/${review.username}` : null
     const hasContent = !!review.content
 
     // Click outside handler
@@ -84,8 +93,13 @@ function ReviewItem({
                 <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold text-white text-sm flex items-center gap-1">
-                            {displayName}
-                            {review.isVerified && (
+                            {userProfileLink ? (
+                                <Link href={userProfileLink} className="hover:text-primary transition-colors">
+                                    {displayName}
+                                </Link>
+                            ) : displayName}
+                            {/* Admin always gets verified badge */}
+                            {(review.isVerified || review.isAdmin) && (
                                 <BadgeCheck size={14} className="text-blue-400 fill-blue-400/20" />
                             )}
                             {review.isAdmin && (
@@ -124,7 +138,7 @@ function ReviewItem({
                                 <MoreHorizontal size={14} /> Opsi
                             </button>
                             {showOptions && (
-                                <div className="absolute left-0 mt-1 w-32 bg-[#1a1a1a] rounded-lg shadow-xl border border-gray-700 z-10">
+                                <div className="absolute left-0 mt-1 w-36 bg-[#1a1a1a] rounded-lg shadow-xl border border-gray-700 z-10">
                                     <button
                                         onClick={() => {
                                             onCopyLink(review.id)
@@ -134,15 +148,69 @@ function ReviewItem({
                                     >
                                         <LinkIcon size={12} /> Salin Link
                                     </button>
-                                    <button className="w-full text-left px-3 py-2 text-xs text-white hover:bg-red-500/20 hover:text-red-400 flex items-center gap-2">
-                                        <Flag size={12} /> Laporkan
-                                    </button>
+                                    {isLoggedIn && !review.isOwner && (
+                                        <button
+                                            onClick={() => {
+                                                setShowReportModal(true)
+                                                setShowOptions(false)
+                                            }}
+                                            className="w-full text-left px-3 py-2 text-xs text-white hover:bg-red-500/20 hover:text-red-400 flex items-center gap-2"
+                                        >
+                                            <Flag size={12} /> Laporkan
+                                        </button>
+                                    )}
+                                    {review.isOwner && (
+                                        <button
+                                            onClick={() => {
+                                                setShowDeleteModal(true)
+                                                setShowOptions(false)
+                                            }}
+                                            className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-red-500/20 flex items-center gap-2"
+                                        >
+                                            <Trash2 size={12} /> Hapus Ulasan
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Delete Modal */}
+            <DeleteConfirmModal
+                isOpen={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={async () => {
+                    setIsDeleting(true)
+                    try {
+                        await onDelete(review.id)
+                        setShowDeleteModal(false)
+                    } finally {
+                        setIsDeleting(false)
+                    }
+                }}
+                message="Yakin ingin menghapus ulasan ini? Tindakan ini tidak dapat dibatalkan."
+                isLoading={isDeleting}
+            />
+
+            {/* Report Modal */}
+            <ReportModal
+                isOpen={showReportModal}
+                onClose={() => setShowReportModal(false)}
+                onSubmit={async (reason) => {
+                    setIsReporting(true)
+                    try {
+                        await onReport(review.id, reason)
+                        setShowReportModal(false)
+                    } finally {
+                        setIsReporting(false)
+                    }
+                }}
+                title="Laporkan Ulasan"
+                placeholder="Jelaskan alasan pelaporan ulasan ini..."
+                isLoading={isReporting}
+            />
         </div>
     )
 }
@@ -207,6 +275,47 @@ function ReviewsTab({ movieId, movieSlug }: TabProps) {
         showToast("Link ulasan disalin!", "success")
     }
 
+    const handleReport = async (reviewId: number, reason: string) => {
+        try {
+            const res = await fetch(`/api/reviews/${reviewId}/report`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reason })
+            })
+            const data = await res.json()
+
+            if (data.success) {
+                showToast("Laporan berhasil dikirim", "success")
+            } else {
+                showToast(data.error || "Gagal mengirim laporan", "error")
+            }
+        } catch (error) {
+            console.error("Error reporting review:", error)
+            showToast("Gagal mengirim laporan", "error")
+        }
+    }
+
+    const handleDelete = async (reviewId: number) => {
+        try {
+            const res = await fetch("/api/reviews", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reviewId })
+            })
+            const data = await res.json()
+
+            if (data.success) {
+                setReviews(reviews.filter(r => r.id !== reviewId))
+                showToast("Ulasan berhasil dihapus", "success")
+            } else {
+                showToast(data.error || "Gagal menghapus ulasan", "error")
+            }
+        } catch (error) {
+            console.error("Error deleting review:", error)
+            showToast("Gagal menghapus ulasan", "error")
+        }
+    }
+
     if (isLoading) {
         return (
             <div className="text-center py-8 text-gray-500">
@@ -235,6 +344,8 @@ function ReviewsTab({ movieId, movieSlug }: TabProps) {
                     currentUserId={currentUserId}
                     onVote={handleVote}
                     onCopyLink={handleCopyLink}
+                    onReport={handleReport}
+                    onDelete={handleDelete}
                 />
             ))}
         </div>

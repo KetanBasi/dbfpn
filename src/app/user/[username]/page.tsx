@@ -1,4 +1,4 @@
-import { Star, Calendar, Award, Film, MessageSquare, Instagram, Twitter } from "lucide-react"
+import { Star, Calendar, Award, Film, MessageSquare, Instagram, Twitter, BadgeCheck, ShieldCheck, MoreHorizontal } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import prisma from "@/lib/prisma"
@@ -105,15 +105,27 @@ export default async function UserProfile({ params }: { params: Promise<{ userna
                   <div>
                     <h1 className="text-3xl font-bold">{displayName}</h1>
                     <p className="text-gray-400">@{user.username || "user"}</p>
+                    {/* Badges below @username */}
+                    <div className="flex items-center gap-2 mt-2">
+                      {/* Admin always gets verified badge */}
+                      {(user.isVerified || user.role === "admin") && (
+                        <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs">
+                          <BadgeCheck size={14} /> Verified
+                        </span>
+                      )}
+                      {user.role === "admin" && (
+                        <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10 text-green-400 text-xs">
+                          <ShieldCheck size={14} /> Admin
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-3">
-                    {isAdminViewer ? (
+                    {isAdminViewer && (
                       <Link href={adminModerationLink} className="hover:opacity-90">
                         {roleBadge}
                       </Link>
-                    ) : (
-                      roleBadge
                     )}
 
                     {viewerId !== user.id && (
