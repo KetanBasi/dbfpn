@@ -279,18 +279,6 @@ function CommentItem({
                                         </button>
                                         {showOptions && (
                                             <div className="absolute left-0 mt-1 w-36 bg-[#252525] rounded-lg shadow-xl border border-gray-700 z-10">
-                                                {comment.isOwner && (
-                                                    <button
-                                                        onClick={handleDelete}
-                                                        disabled={isDeleting}
-                                                        className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-red-500/20 flex items-center gap-2"
-                                                    >
-                                                        <Trash2 size={12} /> {isDeleting ? "Menghapus..." : "Hapus Komentar"}
-                                                    </button>
-                                                )}
-                                                <button className="w-full text-left px-3 py-2 text-xs text-white hover:bg-red-500/20 hover:text-red-400 flex items-center gap-2">
-                                                    <Flag size={12} /> Laporkan
-                                                </button>
                                                 <button
                                                     onClick={() => {
                                                         onCopyLink(comment.id)
@@ -300,6 +288,18 @@ function CommentItem({
                                                 >
                                                     <LinkIcon size={12} /> Salin Link
                                                 </button>
+                                                <button className="w-full text-left px-3 py-2 text-xs text-white hover:bg-red-500/20 hover:text-red-400 flex items-center gap-2">
+                                                    <Flag size={12} /> Laporkan
+                                                </button>
+                                                {comment.isOwner && (
+                                                    <button
+                                                        onClick={handleDelete}
+                                                        disabled={isDeleting}
+                                                        className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-red-500/20 flex items-center gap-2"
+                                                    >
+                                                        <Trash2 size={12} /> {isDeleting ? "Menghapus..." : "Hapus Komentar"}
+                                                    </button>
+                                                )}
                                             </div>
                                         )}
                                     </div>

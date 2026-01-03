@@ -101,9 +101,6 @@ function ReviewItem({
                             </button>
                             {showOptions && (
                                 <div className="absolute left-0 mt-1 w-32 bg-[#1a1a1a] rounded-lg shadow-xl border border-gray-700 z-10">
-                                    <button className="w-full text-left px-3 py-2 text-xs text-white hover:bg-red-500/20 hover:text-red-400 flex items-center gap-2">
-                                        <Flag size={12} /> Laporkan
-                                    </button>
                                     <button
                                         onClick={() => {
                                             onCopyLink(review.id)
@@ -112,6 +109,9 @@ function ReviewItem({
                                         className="w-full text-left px-3 py-2 text-xs text-white hover:bg-gray-700 flex items-center gap-2"
                                     >
                                         <LinkIcon size={12} /> Salin Link
+                                    </button>
+                                    <button className="w-full text-left px-3 py-2 text-xs text-white hover:bg-red-500/20 hover:text-red-400 flex items-center gap-2">
+                                        <Flag size={12} /> Laporkan
                                     </button>
                                 </div>
                             )}
