@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { MessageSquare, Star, ThumbsUp, ThumbsDown, MoreHorizontal, Flag, Link as LinkIcon, ChevronDown, ChevronUp } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { useToast } from "@/components/ui/Toast"
@@ -42,8 +42,21 @@ function ReviewItem({
     onCopyLink: (reviewId: number) => void
 }) {
     const [showOptions, setShowOptions] = useState(false)
+    const optionsRef = useRef<HTMLDivElement>(null)
     const displayName = review.name || review.username || `User`
     const initial = displayName.charAt(0).toUpperCase()
+    const hasContent = !!review.content
+
+    // Click outside handler
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (optionsRef.current && !optionsRef.current.contains(event.target as Node)) {
+                setShowOptions(false)
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside)
+        return () => document.removeEventListener("mousedown", handleClickOutside)
+    }, [])
 
     const renderStars = (rating: number) => {
         return Array(5).fill(0).map((_, i) => (
@@ -56,27 +69,27 @@ function ReviewItem({
     }
 
     return (
-        <div id={`review-${review.id}`} className="bg-[#252525] rounded-xl p-4 scroll-mt-24">
-            <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-full bg-gray-700 flex-shrink-0 overflow-hidden flex items-center justify-center">
+        <div id={`review-${review.id}`} className={`bg-[#252525] rounded-xl scroll-mt-24 ${hasContent ? 'p-4' : 'px-4 py-3'}`}>
+            <div className="flex gap-3">
+                <div className={`rounded-full bg-gray-700 flex-shrink-0 overflow-hidden flex items-center justify-center ${hasContent ? 'w-10 h-10' : 'w-8 h-8'}`}>
                     {review.avatar_url ? (
-                        <Image src={review.avatar_url} alt={displayName} width={40} height={40} className="object-cover" />
+                        <Image src={review.avatar_url} alt={displayName} width={hasContent ? 40 : 32} height={hasContent ? 40 : 32} className="object-cover" />
                     ) : (
-                        <span className="text-white font-bold">{initial}</span>
+                        <span className={`text-white font-bold ${hasContent ? '' : 'text-sm'}`}>{initial}</span>
                     )}
                 </div>
                 <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold text-white text-sm">{displayName}</span>
                         <div className="flex items-center gap-0.5">{renderStars(review.rating)}</div>
                         <span className="text-xs text-gray-500">
                             {new Date(review.created_at).toLocaleDateString("id-ID")}
                         </span>
                     </div>
-                    {review.content && (
-                        <p className="text-gray-300 text-sm mb-3 whitespace-pre-wrap">{review.content}</p>
+                    {hasContent && (
+                        <p className="text-gray-300 text-sm mt-1 mb-2 whitespace-pre-wrap">{review.content}</p>
                     )}
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <div className={`flex items-center gap-4 text-xs text-gray-500 ${hasContent ? '' : 'mt-1'}`}>
                         <button
                             onClick={() => onVote(review.id, true)}
                             className={`flex items-center gap-1 hover:text-white ${review.userVote === "agree" ? "text-green-400" : ""}`}
@@ -92,7 +105,7 @@ function ReviewItem({
                             <ThumbsDown size={14} /> Tidak Setuju ({review.disagrees})
                         </button>
 
-                        <div className="relative">
+                        <div className="relative" ref={optionsRef}>
                             <button
                                 onClick={() => setShowOptions(!showOptions)}
                                 className={`flex items-center gap-1 hover:text-white ${showOptions ? "text-white" : ""}`}
@@ -137,8 +150,8 @@ function ReviewsTab({ movieId, movieSlug }: TabProps) {
             const res = await fetch(`/api/reviews?movieId=${movieId}`)
             const data = await res.json()
             if (data.reviews) {
-                // Filter to only show reviews with content
-                setReviews(data.reviews.filter((r: ReviewData) => r.content))
+                // Show all reviews (including rating-only)
+                setReviews(data.reviews)
             }
         } catch (error) {
             console.error("Error fetching reviews:", error)
@@ -195,8 +208,7 @@ function ReviewsTab({ movieId, movieSlug }: TabProps) {
     if (reviews.length === 0) {
         return (
             <div className="text-center py-8 text-gray-500">
-                <p>Belum ada ulasan dengan deskripsi.</p>
-                <p className="text-xs mt-1">Rating tanpa ulasan tetap dihitung di rata-rata.</p>
+                Belum ada ulasan untuk film ini.
             </div>
         )
     }
@@ -241,8 +253,8 @@ export default function ReviewsCommentsSection({ movieId, movieSlug }: TabProps)
                 const reviewsData = await reviewsRes.json()
                 const commentsData = await commentsRes.json()
 
-                // Count reviews with content
-                setReviewCount(reviewsData.reviews?.filter((r: any) => r.content).length || 0)
+                // Count all reviews (including rating-only)
+                setReviewCount(reviewsData.reviews?.length || 0)
                 setCommentCount(commentsData.total || 0)
             } catch (error) {
                 console.error("Error fetching counts:", error)
