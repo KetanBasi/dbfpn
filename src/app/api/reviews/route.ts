@@ -1,7 +1,8 @@
 // src/app/api/reviews/route.ts
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/auth" // SESUAIKAN: lihat poin di bawah
+import { auth } from "@/auth"
 import { query } from "@/lib/db"
+import prisma from "@/lib/prisma"
 
 // POST /api/reviews
 // Body: { movieId: number, rating: 1-5, content?: string }
@@ -95,7 +96,7 @@ export async function GET(req: NextRequest) {
     const userId = session?.user?.id ? Number(session.user.id) : null
 
     // Fetch reviews with votes using Prisma
-    const reviews = await (await import("@/lib/prisma")).default.review.findMany({
+    const reviews = await prisma.review.findMany({
       where: { movieId },
       include: {
         user: {
