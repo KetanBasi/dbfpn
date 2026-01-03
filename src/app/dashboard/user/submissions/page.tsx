@@ -1,8 +1,9 @@
 import Link from "next/link"
-import { Upload, Edit, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react"
+import { Upload, Edit, Clock, CheckCircle, XCircle, AlertCircle, Sparkles } from "lucide-react"
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import Image from "next/image"
+import { redirect } from "next/navigation"
 
 // Helper component to display movie image with fallback
 function MovieImage({ movie }: { movie: { posterUrl: string | null, bannerUrl: string | null, title: string } }) {
@@ -30,8 +31,27 @@ function MovieImage({ movie }: { movie: { posterUrl: string | null, bannerUrl: s
 export default async function MySubmissions() {
     const session = await auth()
 
+    if (!session?.user) {
+        redirect("/auth/signin")
+    }
+
+    const userId = Number(session.user.id)
+
+    // Check if user is verified
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { isVerified: true, role: true }
+    })
+
+    const isVerified = user?.isVerified || user?.role === "admin"
+
+    // Redirect non-verified users to upgrade page
+    if (!isVerified) {
+        redirect("/dashboard/user/upgrade")
+    }
+
     const submissions = await prisma.movie.findMany({
-        where: { submitterId: Number(session?.user?.id) },
+        where: { submitterId: userId },
         orderBy: { updatedAt: 'desc' }
     })
 
@@ -59,10 +79,11 @@ export default async function MySubmissions() {
                 <h1 className="text-3xl font-bold text-white">Kiriman Saya</h1>
                 <Link
                     href="/dashboard/submission"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-black font-bold hover:bg-yellow-500 transition-colors text-sm"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-black font-bold hover:from-amber-500 hover:to-yellow-600 transition-all text-sm shadow-lg shadow-yellow-500/20 group"
                 >
-                    <Upload size={16} />
-                    Kirim Film Baru
+                    <Sparkles size={16} className="group-hover:animate-pulse" />
+                    <span>Kirim Film Baru</span>
+                    <span className="animate-pulse">✨</span>
                 </Link>
             </div>
 
