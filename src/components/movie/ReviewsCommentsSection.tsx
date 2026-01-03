@@ -195,7 +195,8 @@ function ReviewsTab({ movieId, movieSlug }: TabProps) {
     if (reviews.length === 0) {
         return (
             <div className="text-center py-8 text-gray-500">
-                Belum ada ulasan dengan deskripsi untuk film ini.
+                <p>Belum ada ulasan dengan deskripsi.</p>
+                <p className="text-xs mt-1">Rating tanpa ulasan tetap dihitung di rata-rata.</p>
             </div>
         )
     }
@@ -257,8 +258,8 @@ export default function ReviewsCommentsSection({ movieId, movieSlug }: TabProps)
                 <button
                     onClick={() => setActiveTab("reviews")}
                     className={`flex items-center gap-2 px-4 py-3 font-medium text-sm border-b-2 transition-colors ${activeTab === "reviews"
-                            ? "text-primary border-primary"
-                            : "text-gray-400 border-transparent hover:text-white"
+                        ? "text-primary border-primary"
+                        : "text-gray-400 border-transparent hover:text-white"
                         }`}
                 >
                     <Star size={18} />
@@ -267,8 +268,8 @@ export default function ReviewsCommentsSection({ movieId, movieSlug }: TabProps)
                 <button
                     onClick={() => setActiveTab("comments")}
                     className={`flex items-center gap-2 px-4 py-3 font-medium text-sm border-b-2 transition-colors ${activeTab === "comments"
-                            ? "text-primary border-primary"
-                            : "text-gray-400 border-transparent hover:text-white"
+                        ? "text-primary border-primary"
+                        : "text-gray-400 border-transparent hover:text-white"
                         }`}
                 >
                     <MessageSquare size={18} />

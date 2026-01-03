@@ -1,29 +1,16 @@
- GET /movie/man-vs-baby 200 in 2.7s (compile: 746ms, proxy.ts: 858ms, render: 1056ms)
+ GET /api/comments?movieId=2 200 in 740ms (compile: 51ms, render: 689ms)
+ GET /api/comments?movieId=2 200 in 325ms (compile: 19ms, render: 307ms)
 prisma:error
-Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].comment.findMany()` invocation in
-/home/ketan/projects/dbfpn/.next/dev/server/chunks/[root-of-the-server]__6685a79c._.js:506:166
+Invalid `loader)")).default.review.findMany()` invocation in
+/home/ketan/projects/dbfpn/.next/dev/server/chunks/[root-of-the-server]__c2aa2a05._.js:617:148
 
-  503 const session = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$auth$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["auth"])();
-  504 const currentUserId = session?.user ? Number(session.user.id) : null;
-  505 // Fetch top-level comments with their replies
-→ 506 const comments = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].comment.findMany({
-        where: {
-          movieId: 2,
-          parentId: null
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              username: true,
-              name: true,
-              avatarUrl: true,
-              role: true
-            }
-          },
-          votes: true,
-          ~~~~~
-          replies: {
+  614 try {
+  615     const userId = session?.user?.id ? Number(session.user.id) : null;
+  616     // Fetch reviews with votes using Prisma
+→ 617     const reviews = await (await __turbopack_context__.A("[project]/src/lib/prisma.ts [app-route] (ecmascript, async loader)")).default.review.findMany({
+            where: {
+              movieId: 2
+            },
             include: {
               user: {
                 select: {
@@ -35,62 +22,26 @@ Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e
                 }
               },
               votes: true,
-              replies: {
-                include: {
-                  user: {
-                    select: {
-                      id: true,
-                      username: true,
-                      name: true,
-                      avatarUrl: true,
-                      role: true
-                    }
-                  },
-                  votes: true
-                },
-                orderBy: {
-                  createdAt: "asc"
-                }
-              }
+              ~~~~~
+          ?   movie?: true
             },
             orderBy: {
-              createdAt: "asc"
+              createdAt: "desc"
             }
-          },
-      ?   movie?: true,
-      ?   parent?: true
-        },
-        orderBy: {
-          createdAt: "desc"
-        }
-      })
+          })
 
-Unknown field `votes` for include statement on model `Comment`. Available options are marked with ?.
-⨯ Error [PrismaClientValidationError]:
-Invalid `{imported module ./src/lib/prisma.ts}["default"].comment.findMany()` invocation in
-/home/ketan/projects/dbfpn/.next/dev/server/chunks/[root-of-the-server]__6685a79c._.js:506:166
+Unknown field `votes` for include statement on model `Review`. Available options are marked with ?.
+Error GET /api/reviews Error [PrismaClientValidationError]:
+Invalid `loader)")).default.review.findMany()` invocation in
+/home/ketan/projects/dbfpn/.next/dev/server/chunks/[root-of-the-server]__c2aa2a05._.js:617:148
 
-  503 const session = await (0, {imported module ./src/auth.ts}["auth"])();
-  504 const currentUserId = session?.user ? Number(session.user.id) : null;
-  505 // Fetch top-level comments with their replies
-→ 506 const comments = await {imported module ./src/lib/prisma.ts}["default"].comment.findMany({
-        where: {
-          movieId: 2,
-          parentId: null
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              username: true,
-              name: true,
-              avatarUrl: true,
-              role: true
-            }
-          },
-          votes: true,
-          ~~~~~
-          replies: {
+  614 try {
+  615     const userId = session?.user?.id ? Number(session.user.id) : null;
+  616     // Fetch reviews with votes using Prisma
+→ 617     const reviews = await (await __turbopack_context__.A("[project]/src/lib/prisma.ts [app-route] (ecmascript, async loader)")).default.review.findMany({
+            where: {
+              movieId: 2
+            },
             include: {
               user: {
                 select: {
@@ -102,49 +53,101 @@ Invalid `{imported module ./src/lib/prisma.ts}["default"].comment.findMany()` in
                 }
               },
               votes: true,
-              replies: {
-                include: {
-                  user: {
-                    select: {
-                      id: true,
-                      username: true,
-                      name: true,
-                      avatarUrl: true,
-                      role: true
-                    }
-                  },
-                  votes: true
-                },
-                orderBy: {
-                  createdAt: "asc"
-                }
-              }
+              ~~~~~
+          ?   movie?: true
             },
             orderBy: {
-              createdAt: "asc"
+              createdAt: "desc"
             }
-          },
-      ?   movie?: true,
-      ?   parent?: true
-        },
-        orderBy: {
-          createdAt: "desc"
-        }
-      })
+          })
 
-Unknown field `votes` for include statement on model `Comment`. Available options are marked with ?.
-    at <unknown> (src/app/api/comments/route.ts:17:43)
-    at async GET (src/app/api/comments/route.ts:17:22)
-  15 |
-  16 |     // Fetch top-level comments with their replies
-> 17 |     const comments = await prisma.comment.findMany({
-     |                                           ^
-  18 |         where: {
-  19 |             movieId: Number(movieId),
-  20 |             parentId: null, // Only top-level comments {
+Unknown field `votes` for include statement on model `Review`. Available options are marked with ?.
+    at <unknown> (src/app/api/reviews/route.ts:98:73)
+    at async GET (src/app/api/reviews/route.ts:98:21)
+   96 |
+   97 |     // Fetch reviews with votes using Prisma
+>  98 |     const reviews = await (await import("@/lib/prisma")).default.review.findMany({
+      |                                                                         ^
+   99 |       where: { movieId },
+  100 |       include: {
+  101 |         user: { {
   clientVersion: '5.22.0'
 }
- GET /api/comments?movieId=2 500 in 860ms (compile: 21ms, render: 838ms)
- GET /api/auth/session 200 in 858ms (compile: 191ms, render: 667ms)
- GET /api/auth/session 200 in 309ms (compile: 27ms, render: 282ms)
- GET /api/auth/session 200 in 260ms (compile: 16ms, render: 244ms)
+ GET /api/reviews?movieId=2 500 in 1728ms (compile: 49ms, render: 1679ms)
+prisma:error
+Invalid `loader)")).default.review.findMany()` invocation in
+/home/ketan/projects/dbfpn/.next/dev/server/chunks/[root-of-the-server]__c2aa2a05._.js:617:148
+
+  614 try {
+  615     const userId = session?.user?.id ? Number(session.user.id) : null;
+  616     // Fetch reviews with votes using Prisma
+→ 617     const reviews = await (await __turbopack_context__.A("[project]/src/lib/prisma.ts [app-route] (ecmascript, async loader)")).default.review.findMany({
+            where: {
+              movieId: 2
+            },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  username: true,
+                  name: true,
+                  avatarUrl: true,
+                  role: true
+                }
+              },
+              votes: true,
+              ~~~~~
+          ?   movie?: true
+            },
+            orderBy: {
+              createdAt: "desc"
+            }
+          })
+
+Unknown field `votes` for include statement on model `Review`. Available options are marked with ?.
+Error GET /api/reviews Error [PrismaClientValidationError]:
+Invalid `loader)")).default.review.findMany()` invocation in
+/home/ketan/projects/dbfpn/.next/dev/server/chunks/[root-of-the-server]__c2aa2a05._.js:617:148
+
+  614 try {
+  615     const userId = session?.user?.id ? Number(session.user.id) : null;
+  616     // Fetch reviews with votes using Prisma
+→ 617     const reviews = await (await __turbopack_context__.A("[project]/src/lib/prisma.ts [app-route] (ecmascript, async loader)")).default.review.findMany({
+            where: {
+              movieId: 2
+            },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  username: true,
+                  name: true,
+                  avatarUrl: true,
+                  role: true
+                }
+              },
+              votes: true,
+              ~~~~~
+          ?   movie?: true
+            },
+            orderBy: {
+              createdAt: "desc"
+            }
+          })
+
+Unknown field `votes` for include statement on model `Review`. Available options are marked with ?.
+    at <unknown> (src/app/api/reviews/route.ts:98:73)
+    at async GET (src/app/api/reviews/route.ts:98:21)
+   96 |
+   97 |     // Fetch reviews with votes using Prisma
+>  98 |     const reviews = await (await import("@/lib/prisma")).default.review.findMany({
+      |                                                                         ^
+   99 |       where: { movieId },
+  100 |       include: {
+  101 |         user: { {
+  clientVersion: '5.22.0'
+}
+ GET /api/reviews?movieId=2 500 in 19.2s (compile: 174ms, render: 19.0s)
+ GET /api/comments?movieId=2 200 in 19.2s (compile: 89ms, render: 19.1s)
+ GET /api/comments?movieId=2 200 in 341ms (compile: 27ms, render: 313ms)
+ GET /api/comments?movieId=2 200 in 261ms (compile: 16ms, render: 245ms)
