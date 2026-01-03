@@ -18,17 +18,20 @@ model User {
   bio           String?
   createdAt     DateTime       @default(now()) @map("created_at")
   status        String         @default("active")
+  isVerified    Boolean        @default(false) @map("is_verified")
   socialLinks   Json?          @map("social_links")
   accounts      Account[]
   auditLogs     AuditLog[]
   comments      Comment[]
   commentVotes  CommentVote[]
+  commentReports CommentReport[]
   movies        Movie[]
   notifications Notification[]
   people        Person[]
   reports       Report[]       @relation("UserReports")
   reviews       Review[]
   reviewVotes   ReviewVote[]
+  reviewReports ReviewReport[]
   sessions      Session[]
   watchlist     Watchlist[]
 
@@ -183,9 +186,10 @@ model Review {
   content   String?
   createdAt DateTime     @default(now()) @map("created_at")
   updatedAt DateTime?    @updatedAt @map("updated_at")
-  movie     Movie        @relation(fields: [movieId], references: [id])
-  user      User         @relation(fields: [userId], references: [id])
+  movie     Movie          @relation(fields: [movieId], references: [id])
+  user      User           @relation(fields: [userId], references: [id])
   votes     ReviewVote[]
+  reports   ReviewReport[]
 
   @@unique([userId, movieId])
   @@index([movieId])
@@ -208,6 +212,22 @@ model ReviewVote {
   @@map("review_votes")
 }
 
+model ReviewReport {
+  id        Int      @id @default(autoincrement())
+  reviewId  Int      @map("review_id")
+  userId    Int      @map("user_id")
+  reason    String
+  status    String   @default("pending") // pending, resolved, dismissed
+  createdAt DateTime @default(now()) @map("created_at")
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, userId])
+  @@index([reviewId])
+  @@index([status])
+  @@map("review_reports")
+}
+
 model Comment {
   id        Int           @id @default(autoincrement())
   userId    Int           @map("user_id")
@@ -222,6 +242,7 @@ model Comment {
   replies   Comment[]     @relation("CommentReplies")
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   votes     CommentVote[]
+  reports   CommentReport[]
 
   @@index([movieId])
   @@index([userId])
@@ -241,6 +262,22 @@ model CommentVote {
   @@id([userId, commentId])
   @@index([commentId])
   @@map("comment_votes")
+}
+
+model CommentReport {
+  id        Int      @id @default(autoincrement())
+  commentId Int      @map("comment_id")
+  userId    Int      @map("user_id")
+  reason    String
+  status    String   @default("pending") // pending, resolved, dismissed
+  createdAt DateTime @default(now()) @map("created_at")
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@index([status])
+  @@map("comment_reports")
 }
 
 model Watchlist {

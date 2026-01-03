@@ -6,6 +6,7 @@ import Image from "next/image"
 import { useState, useRef, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useToast } from "@/components/ui/Toast"
+import { DeleteConfirmModal, ReportModal } from "@/components/ui/Modal"
 
 const EMOJIS = ["😀", "😂", "😍", "🔥", "👍", "👎", "😭", "😱", "🤔", "💩"]
 
@@ -15,6 +16,7 @@ interface CommentUser {
     name: string | null
     avatarUrl: string | null
     isAdmin: boolean
+    isVerified: boolean
 }
 
 interface CommentData {
@@ -235,11 +237,11 @@ function CommentItem({
                             <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                                 <span className={`font-bold text-sm flex items-center gap-1 ${isDeleted ? "text-gray-500 italic" : "text-white"}`}>
                                     {isDeleted ? "[dihapus]" : displayName}
+                                    {!isDeleted && comment.user.isVerified && (
+                                        <BadgeCheck size={14} className="text-blue-400 fill-blue-400/20" />
+                                    )}
                                     {!isDeleted && comment.user.isAdmin && (
-                                        <>
-                                            <BadgeCheck size={14} className="text-blue-400 fill-blue-400/20" />
-                                            <ShieldCheck size={14} className="text-green-400 fill-green-400/20" />
-                                        </>
+                                        <ShieldCheck size={14} className="text-green-400 fill-green-400/20" />
                                     )}
                                 </span>
                                 <span className="text-xs text-gray-500">{new Date(comment.createdAt).toLocaleDateString("id-ID")}</span>

@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
                     name: true,
                     avatarUrl: true,
                     role: true,
+                    isVerified: true,
                 }
             },
             votes: true,
@@ -39,6 +40,7 @@ export async function GET(request: NextRequest) {
                             name: true,
                             avatarUrl: true,
                             role: true,
+                            isVerified: true,
                         }
                     },
                     votes: true,
@@ -51,6 +53,7 @@ export async function GET(request: NextRequest) {
                                     name: true,
                                     avatarUrl: true,
                                     role: true,
+                                    isVerified: true,
                                 }
                             },
                             votes: true,
@@ -84,6 +87,7 @@ export async function GET(request: NextRequest) {
                 name: comment.user.name,
                 avatarUrl: comment.user.avatarUrl,
                 isAdmin: comment.user.role === "admin",
+                isVerified: comment.user.isVerified,
             },
             likes,
             dislikes,

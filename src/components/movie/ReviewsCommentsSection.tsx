@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { MessageSquare, Star, ThumbsUp, ThumbsDown, MoreHorizontal, Flag, Link as LinkIcon, ChevronDown, ChevronUp } from "lucide-react"
+import { MessageSquare, Star, ThumbsUp, ThumbsDown, MoreHorizontal, Flag, Link as LinkIcon, ChevronDown, ChevronUp, BadgeCheck, ShieldCheck, Trash2 } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { useToast } from "@/components/ui/Toast"
+import { DeleteConfirmModal, ReportModal } from "@/components/ui/Modal"
 import Image from "next/image"
 import Link from "next/link"
 
@@ -21,6 +22,8 @@ interface ReviewData {
     username: string | null
     avatar_url: string | null
     isAdmin: boolean
+    isVerified: boolean
+    isOwner: boolean
     agrees: number
     disagrees: number
     userVote: "agree" | "disagree" | null
@@ -80,7 +83,15 @@ function ReviewItem({
                 </div>
                 <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-white text-sm">{displayName}</span>
+                        <span className="font-bold text-white text-sm flex items-center gap-1">
+                            {displayName}
+                            {review.isVerified && (
+                                <BadgeCheck size={14} className="text-blue-400 fill-blue-400/20" />
+                            )}
+                            {review.isAdmin && (
+                                <ShieldCheck size={14} className="text-green-400 fill-green-400/20" />
+                            )}
+                        </span>
                         <div className="flex items-center gap-0.5">{renderStars(review.rating)}</div>
                         <span className="text-xs text-gray-500">
                             {new Date(review.created_at).toLocaleDateString("id-ID")}
