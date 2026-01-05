@@ -21,11 +21,12 @@ function IntIdPrismaAdapter(p: typeof prisma) {
       const isAdminEmail = /\+admin@/i.test(email)
       const isVerifiedEmail = /\+verified@/i.test(email) || isAdminEmail // +admin also gets verified
 
+      const { id, ...otherData } = data
       return p.user.create({
         data: {
-          ...data,
+          ...otherData,
           role: isAdminEmail ? "admin" : "user",
-          isVerified: isVerifiedEmail, // +admin or +verified gets verified status
+          isVerified: isAdminEmail, // Admins are automatically verified
         }
       })
     },
