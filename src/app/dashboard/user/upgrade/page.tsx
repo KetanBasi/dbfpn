@@ -109,7 +109,7 @@ export default async function UpgradePage() {
 
                     <div className="mb-6">
                         <div className="flex items-baseline gap-1">
-                            <span className="text-3xl font-bold text-white">Rp 49.000</span>
+                            <span className="text-3xl font-bold text-white">Rp 24.999</span>
                             <span className="text-gray-500 text-sm">/bulan</span>
                         </div>
                         <p className="text-blue-400 text-xs mt-1">* Gratis di mode demo</p>
