@@ -4,7 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { Search, ChevronDown, User, Film, Settings, LogOut, Plus, LayoutDashboard, Shield } from "lucide-react"
 import { useState, useRef, useEffect, type FormEvent } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
 
 export default function Navbar() {
@@ -16,6 +16,7 @@ export default function Navbar() {
   const searchDropdownRef = useRef<HTMLDivElement>(null)
   const profileDropdownRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+  const pathname = usePathname()
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -238,7 +239,7 @@ export default function Navbar() {
             </div>
           ) : (
             <Link
-              href="/signin"
+              href={`/signin?callbackUrl=${encodeURIComponent(pathname)}`}
               className="bg-primary text-black font-medium px-4 py-1.5 rounded-full hover:bg-yellow-400 transition-colors"
             >
               Masuk

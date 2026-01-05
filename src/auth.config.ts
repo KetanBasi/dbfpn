@@ -50,6 +50,10 @@ export const authConfig = {
 
       // Redirect authenticated users from auth pages to dashboard
       if (isOnAuth && isLoggedIn) {
+        const callbackUrl = request.nextUrl.searchParams.get("callbackUrl")
+        if (callbackUrl) {
+          return NextResponse.redirect(new URL(callbackUrl, request.nextUrl))
+        }
         return NextResponse.redirect(new URL("/dashboard", request.nextUrl))
       }
 
